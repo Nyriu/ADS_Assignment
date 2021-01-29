@@ -1,0 +1,11 @@
+*.csv
+*.zip
+
+.RData
+.Rhistory
+
+init_email.md
+note_tristano.md
+
+nope/
+keys/
