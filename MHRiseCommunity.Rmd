@@ -47,16 +47,16 @@ remove(access_secret)
 
 ## Data collection
 ```{r}
-DOWNLOAD_DATA = FALSE
+DOWNLOAD_DATA = TRUE
 DOWNLOAD_DIR = "./CSVs"
 ```
 
 ```{r}
 get_timestamp = function (){ format(Sys.time(), "%Y%m%d_%H%M%S") }
 
-download_followers = function (account_name, n=-1, retryonratelimit = FALSE, download_dir=DOWNLOAD_DIR) {
-  
-}
+#download_followers = function (account_name, n=-1, retryonratelimit = FALSE, download_dir=DOWNLOAD_DIR) {
+#  
+#}
 
 ```
 
@@ -67,50 +67,43 @@ download_followers = function (account_name, n=-1, retryonratelimit = FALSE, dow
 ```{r}
 if (DOWNLOAD_DATA) {
   account_name = "monsterhunter"
-  mh_followers = get_followers(account_name, n=5, retryonratelimit = TRUE)
-  #mh_followers = get_followers(account_name, n=500000, retryonratelimit = TRUE)
+  mh_followers = get_followers(account_name, n=500000, retryonratelimit = TRUE)
   file_name = paste(account_name, get_timestamp(), sep = "__")
-  file_path = paste(download_dir, file_name, sep = "/")
+  file_path = paste(DOWNLOAD_DIR, file_name, sep = "/")
   write_as_csv(mh_followers, file_path)
 } else {
-  mh_followers = read_twitter_csv(paste(download_dir, "mh_followers.csv", sep = "/" ))
+  #mh_followers = read_twitter_csv(paste(download_dir, "mh_followers.csv", sep = "/" ))
+  show("TODO")
 }
 mh_followers
 ```
 
-```{r}
-# Second batch
-if (DOWNLOAD_DATA) {
-  #mh_followers_1 = get_followers("monsterhunter", n=75000, page=nrow(mh_followers))
-  mh_followers_1 = get_followers("monsterhunter", n=2, page=-1)
-  write_as_csv(mh_followers_1, "mh_followers_1")
-} else {
-  mh_followers_1 = read_twitter_csv("mh_followers_1.csv")
-}
-mh_followers_1
-DOWNLOAD_DATA = FALSE
-```
-
 
 ```{r}
-DOWNLOAD_DATA = FALSE
 if (DOWNLOAD_DATA) {
-  arekkz_followers  = get_followers("arekkz",        n=75000)
-  write_as_csv(arekkz_followers, "arekkz_followers")
+  account_name = "arekkz"
+  arekkz_followers = get_followers(account_name, n=500000, retryonratelimit = TRUE)
+  file_name = paste(account_name, get_timestamp(), sep = "__")
+  file_path = paste(DOWNLOAD_DIR, file_name, sep = "/")
+  write_as_csv(arekkz_followers, file_path)
 } else {
-  arekkz_followers = read_twitter_csv("arekkz_followers.csv")
+  #arekkz = read_twitter_csv(paste(download_dir, "mh_followers.csv", sep = "/" ))
+  show("TODO")
 }
 arekkz_followers
 ```
 
 
 ```{r}
-DOWNLOAD_DATA = TRUE
 if (DOWNLOAD_DATA) {
-  aevanko_followers = get_followers("aevanko",       n=75000)
-  write_as_csv(aevanko_followers, "aevanko_followers")
+  account_name = "aevanko"
+  aevanko_followers = get_followers(account_name, n=500000, retryonratelimit = TRUE)
+  file_name = paste(account_name, get_timestamp(), sep = "__")
+  file_path = paste(DOWNLOAD_DIR, file_name, sep = "/")
+  write_as_csv(aevanko_followers, file_path)
 } else {
-  aevanko_followers = read_twitter_csv("aevanko_followers.csv")
+  #aevanko = read_twitter_csv(paste(download_dir, "mh_followers.csv", sep = "/" ))
+  show("TODO")
 }
 aevanko_followers
 ```
@@ -119,8 +112,8 @@ aevanko_followers
 
 
 
-
-
+# Alternativa
+per ogni follower di mh prendere 100 follows casuali e vedere se emergono gli hub previsti (arekkz, aevanko, socks...)
 
 
 
