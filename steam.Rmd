@@ -1,0 +1,130 @@
+---
+title: "Steam dataset"
+output:
+  html_document:
+    df_print: paged
+---
+
+# The Dataset
+
+```{r warning=FALSE, error=FALSE, echo=F, show=F, include=F}
+#library(rrecsys)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+```
+
+The dataset considered is the [Steam Video Games Dataset](https://www.kaggle.com/tamber/steam-video-games).
+This dataset is a list of user behaviors, with columns: user-id, game-title, behavior-name, value. The behaviors included are 'purchase' and 'play'. The value indicates the degree to which the behavior was performed - in the case of 'purchase' the value is always 1, and in the case of 'play' the value represents the number of hours the user has played the game.
+```{r}
+raw_data = as_tibble(
+  read.csv("steam-200k.csv", header=F,
+           col.names = c( "user-id","game-title", "behavior-name", "value", "unknown")
+           )
+  )
+head(raw_data)
+```
+```{r include=F, echo=F, show=F}
+# TODO remove
+dim(raw_data)
+```
+# The most played games
+```{r}
+line_data =
+  raw_data %>%
+  filter(behavior.name == "play") %>%
+  group_by(game.title) %>% 
+  count() %>% 
+  ungroup() %>%
+  arrange(desc(n)) %>%
+  mutate(rnum=row_number())
+  
+## TODO remove
+#line_data %>%
+#  ggplot(aes(x=rnum, y=n)) +
+#  geom_line()
+  
+```
+```{r}
+fig <- plot_ly(line_data, x = ~rnum)
+fig <- fig %>% add_lines(y = ~n)
+fig <- fig %>% layout(
+    title = "Most played Games",
+    xaxis = list(
+      # TODO  add buttons
+      #rangeselector = list(
+      #  #buttons = list(
+      #  #  list(
+      #  #    #count = 3,
+      #  #    label = "3 mo",
+      #  #    #step = 1,
+      #  #    #stepmode = "backward"
+      #  #    ),
+      #  #  #list(step = "all"))),
+      #  #  list(label="lol"))),
+      title = "Games by Popularity",
+      rangeslider = list(type = "int")
+      ),
+    yaxis = list(title = "Num. Of Players"))
+
+fig
+```
+
+
+
+
+# The most bought and NOT played
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
