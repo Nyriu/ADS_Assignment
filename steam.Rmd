@@ -348,6 +348,24 @@ write.csv(users_info, "users_info.csv", row.names = F)
 
 
 
+# I VERI DATI
+```{r}
+games_info = read.csv("games_info.csv") %>%
+  # date as date and not as char
+  mutate( across(
+    c(release_date),
+    function(x) {
+        parse_date(x, "%b %d, %Y",locale=locale("en"))
+      }) )
+games_info
+```
+
+
+```{r}
+users_info = read.csv("users_info.csv")
+users_info
+```
+
 # TODO
 Grafico "scatter" in cui X e' asse temporale le palle sono i giochi
 il diametro e' il (log) numero di giocatori
@@ -355,14 +373,21 @@ colore potrebbe essere il genere
 y il numero di ore totali dei giocatori
 
 ```{r}
-games_info = read.csv("games_info.csv")
-games_info
-users_info = read.csv("users_info.csv")
-users_info
-```
 
-```{r}
-games_info 
+games_info %>%
+  select(game.title, release_date) %>%
+  right_join(users_info %>% filter(behavior.name == "play") %>% distinct(user.id, game.title, value), by="game.title") %>%
+  group_by(game.title) %>%
+  summarize(players=n(),total_time = sum(value), release_date, .groups="keep") %>%
+  distinct(game.title, players, total_time, release_date) %>%
+  
+  ggplot(aes(x=release_date, y=log(total_time), alpha=players)) +
+  #ggplot(aes(x=release_date, y=log(total_time), diameter=players)) +
+  #ggplot(aes(x=release_date, alpha=log(total_time), y=players)) + # brutto
+  geom_point()
+
+# TODO add over con ingrossamento del pallino overato
+# TODO add nomi fissi a quelli piu' interessanti
 ```
 
 
