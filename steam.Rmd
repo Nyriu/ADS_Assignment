@@ -13,6 +13,7 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(plotly)
+library("RColorBrewer")
 ```
 
 The dataset considered is the [Steam Video Games Dataset](https://www.kaggle.com/tamber/steam-video-games).
@@ -22,14 +23,15 @@ raw_data = as_tibble(
   read.csv("steam-200k.csv", header=F,
            col.names = c( "user-id","game-title", "behavior-name", "value", "unknown")
            )
-  )
+  ) %>% select(-unknown)
 head(raw_data)
 ```
 ```{r include=F, echo=F, show=F}
 # TODO remove
 dim(raw_data)
 ```
-# The most played games
+
+# The most popular games
 ```{r}
 line_data =
   raw_data %>%
@@ -39,20 +41,16 @@ line_data =
   ungroup() %>%
   arrange(desc(n)) %>%
   mutate(rnum=row_number())
-  
-## TODO remove
-#line_data %>%
-#  ggplot(aes(x=rnum, y=n)) +
-#  geom_line()
-  
 ```
+
 ```{r}
 fig <- plot_ly(line_data, x = ~rnum)
 fig <- fig %>% add_lines(y = ~n)
 fig <- fig %>% layout(
-    title = "Most played Games",
+    title = "Most Popular Games",
     xaxis = list(
-      # TODO  add buttons
+      # TODO add buttons
+      # TODO add game title with mouse over
       #rangeselector = list(
       #  #buttons = list(
       #  #  list(
@@ -71,10 +69,140 @@ fig <- fig %>% layout(
 fig
 ```
 
+# The most played games
+```{r}
+play_time =
+  raw_data %>%
+  filter(behavior.name == "play") %>%
+  select(-behavior.name) %>%
+  group_by(user.id) %>%
+  mutate(total_time = sum(value)) %>%
+  ungroup() %>%
+  mutate(perc_time = value/total_time) %>%
+  select(user.id, game.title, time=value, perc_time, total_time)
+
+games_play_time = play_time %>%
+  select(-user.id, -time, -perc_time) %>%
+  group_by(game.title) %>%
+  summarize(total_time = sum(total_time)) %>%
+  ungroup() %>%
+  arrange(desc(total_time)) %>%
+  mutate(rnum = row_number())
+```
+```{r}
+considered_n = 21
+to_plot = games_play_time %>% filter(rnum <= considered_n)
+to_plot[considered_n,]$game.title = "Others"
+to_plot[considered_n,]$total_time =
+  games_play_time %>% filter(rnum >= considered_n) %>% summarize(total_time=sum(total_time)) %>% pull(total_time)
+
+# TODO fare passaggio con bottone da un grafico all'altro
+# TODO aggiungere label in cima a colonne
+# TODO si puo' creare una colonna "spezzata" ad indicare che sarebbe molto piu' alta ed in cima ci metti il valore "fuori scala"?
+to_plot %>%
+  ggplot(aes(x=rnum, y=total_time)) +
+  geom_col()
+to_plot %>%
+  filter(rnum != considered_n) %>%
+  ggplot(aes(x=rnum, y=total_time)) +
+  geom_col()
+```
+
+
+```{r include=F}
+# TODO questo deve diventare una funziona che: selezionato uno user, torna il piechart dei suoi tempi
+user_play_time =
+  play_time %>%
+  #filter( user.id == 3783783 )
+  filter( user.id == sample(raw_data$user.id, 1) )
+user_play_time
+```
+
+
+```{r include=T, show=F}
+if (nrow(user_play_time) > 10) {
+  perc_to_show=0.90
+  to_plot = user_play_time %>%
+    select(game.title, perc_time, time) %>%
+    mutate(cum_perc_time=cumsum(perc_time)) %>%
+    arrange(cum_perc_time) %>%
+    filter(cum_perc_time <= perc_to_show)
+  
+  to_plot = to_plot %>%
+    add_row(game.title="Others",
+            perc_time=1.0 - max(to_plot$cum_perc_time),
+            time = (summarize(user_play_time, sum(time)) - summarize(to_plot, sum(time))) %>% pull(),
+            cum_perc_time=1.0)
+} else {
+  to_plot = user_play_time %>%
+    select(game.title, perc_time, time) %>%
+    mutate(cum_perc_time=cumsum(perc_time)) %>%
+    arrange(cum_perc_time)
+}
+
+# Se il giocatore ha giocato a tantissimi giochi distribuendo il tempo
+if (nrow(to_plot) > 10) {
+  too_big_to_plot = to_plot %>%
+    arrange(desc(perc_time)) %>%
+    select(-cum_perc_time) %>%
+    mutate(nrow = row_number())
+  #too_big_to_plot
+  
+  to_plot = too_big_to_plot %>%
+    filter(nrow < 8) %>%
+    select(game.title, perc_time, time) %>%
+    mutate(cum_perc_time=cumsum(perc_time)) %>%
+    arrange(cum_perc_time)
+  
+  to_plot = to_plot %>%
+    add_row(game.title="Others",
+            perc_time=1.0 - max(to_plot$cum_perc_time),
+            time = (summarize(user_play_time, sum(time)) - summarize(to_plot, sum(time))) %>% pull(),
+            cum_perc_time=1.0)
+  #to_plot
+}
+to_plot = to_plot %>%
+#to_plot %>%
+  mutate(label=scales::percent(perc_time)) %>%
+  mutate(label=paste(label, paste(time,"h",sep=""), sep="\n")) %>%
+  select(-cum_perc_time) %>%
+  arrange(desc(game.title)) %>%
+  mutate(lab.ypos = cumsum(perc_time) - perc_time/2)
+
+to_plot
+# TODO fare trucchetto per ordinare legenda
+
+to_plot %>%
+  ggplot(aes(x = "", y = perc_time, fill = game.title)) +
+  geom_bar(width = 1, stat = "identity", color = "white") +
+  coord_polar("y") +
+  
+  #geom_text(aes(y = lab.ypos, label = label), color = "white") +
+  #geom_text(aes(y = lab.ypos, label = label), color = "black") +
+  #geom_text(aes(x=rep(1.3, length(lab.ypos)), y = lab.ypos, label = label), color = "black") +
+  #geom_text(aes(x=1-perc_time*.02, y = lab.ypos, label = label), color = "black") +
+  #geom_text(aes(x=max(1, 1-perc_time*2), y = lab.ypos, label = label), color = "black") +
+  
+  #geom_text(aes(x=0.3 + (1-perc_time*.5), y = lab.ypos, label = label), color = "black") +
+  geom_text(aes(x=0.3 + (1-perc_time*.6), y = lab.ypos, label = label), color = "black") +
+  
+  #scale_fill_manual(values= brewer.pal(n = 5, name = "RdBu")) +
+  #scale_fill_manual(values= brewer.pal(n = 5, name = "Dark2")) +
+  scale_fill_manual(values= brewer.pal(n=nrow(to_plot), name = "Pastel1")) +
+  #scale_fill_manual(values= brewer.pal(n = 5, name = "Pastel2")) +
+  labs(
+    title = paste("Play Time of User", user_play_time %>% pull(user.id)),
+    fill="Game Titles"
+    ) + 
+  theme_void()
+```
 
 
 
 # The most bought and NOT played
+```{r}
+raw_data %>% head()
+```
 
 
 
