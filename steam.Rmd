@@ -201,12 +201,53 @@ to_plot %>%
 
 # The most bought and NOT played
 ```{r}
-raw_data %>% head()
+# Per ogni gioco devo contare quanti l'hanno comprato
+t1 = raw_data %>%
+  filter(behavior.name == "purchase") %>%
+  select(game.title) %>%
+  group_by(game.title) %>%
+  count() %>%
+  ungroup() %>%
+  arrange(desc(n)) %>%
+  select(game.title, buy_num=n)
+# Per ogni gioco devo contare quanti l'hanno giocato
+t2 = raw_data %>%
+  filter(behavior.name == "play") %>%
+  select(game.title) %>%
+  group_by(game.title) %>%
+  count() %>%
+  ungroup() %>%
+  arrange(desc(n)) %>%
+  select(game.title, play_num=n)
+
+t1 %>%
+  full_join(t2, by=c("game.title")) %>%
+  replace_na(list(buy_num=0, play_num=0)) %>%
+  mutate(buy_no_play=1 - play_num/buy_num) %>%
+  arrange(desc(buy_no_play))
 ```
 
+Alcuni sono DLC! In realta' sono stati giocati perche' basta giocare al gioco base
+Usiamo un altro CSV per capire quali sono veramente giochi
 
+```{r}
+raw_data_2 = as_tibble(
+  read.csv("steam_games.csv"
+           #, header=F,
+           #col.names = c( "user-id","game-title", "behavior-name", "value", "unknown")
+           )
+  ) %>% select(-url, -recent_reviews, -all_reviews, -mature_content, -minimum_requirements, -recommended_requirements, -discount_price)
+head(raw_data_2)
+colnames(raw_data_2)
+```
 
-
+Cerchiamo di capire come distinguere DLC dal resto...
+```{r}
+raw_data_2 %>%
+  #filter(types == "app") %>%
+  filter(grepl("Elder Scrolls",name))
+  #filter(grepl("DLC",desc_snippet))
+```
 
 
 
