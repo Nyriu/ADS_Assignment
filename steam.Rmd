@@ -9,6 +9,7 @@ output:
 
 ```{r warning=FALSE, error=FALSE, echo=F, show=F, include=F}
 #library(rrecsys)
+library(readr)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
@@ -16,7 +17,7 @@ library(plotly)
 library("RColorBrewer")
 ```
 
-The dataset considered is the [Steam Video Games Dataset](https://www.kaggle.com/tamber/steam-video-games).
+The first dataset considered is the [Steam Video Games Dataset](https://www.kaggle.com/tamber/steam-video-games).
 This dataset is a list of user behaviors, with columns: user-id, game-title, behavior-name, value. The behaviors included are 'purchase' and 'play'. The value indicates the degree to which the behavior was performed - in the case of 'purchase' the value is always 1, and in the case of 'play' the value represents the number of hours the user has played the game.
 ```{r}
 raw_data = as_tibble(
@@ -143,6 +144,7 @@ if (nrow(user_play_time) > 10) {
 # Se il giocatore ha giocato a tantissimi giochi distribuendo il tempo
 if (nrow(to_plot) > 10) {
   too_big_to_plot = to_plot %>%
+    filter(game.title != "Others") %>%
     arrange(desc(perc_time)) %>%
     select(-cum_perc_time) %>%
     mutate(nrow = row_number())
@@ -201,7 +203,134 @@ to_plot %>%
 
 # The most bought and NOT played
 ```{r}
-raw_data %>% head()
+# Per ogni gioco devo contare quanti l'hanno comprato
+t1 = raw_data %>%
+  filter(behavior.name == "purchase") %>%
+  select(game.title) %>%
+  group_by(game.title) %>%
+  count() %>%
+  ungroup() %>%
+  arrange(desc(n)) %>%
+  select(game.title, buy_num=n)
+# Per ogni gioco devo contare quanti l'hanno giocato
+t2 = raw_data %>%
+  filter(behavior.name == "play") %>%
+  select(game.title) %>%
+  group_by(game.title) %>%
+  count() %>%
+  ungroup() %>%
+  arrange(desc(n)) %>%
+  select(game.title, play_num=n)
+
+t1 %>%
+  full_join(t2, by=c("game.title")) %>%
+  replace_na(list(buy_num=0, play_num=0)) %>%
+  mutate(buy_no_play=1 - play_num/buy_num) %>%
+  arrange(desc(buy_no_play))
+```
+
+Alcuni sono DLC! In realta' sono stati giocati perche' basta giocare al gioco base
+Usiamo un altro CSV per capire quali sono veramente giochi [Steam games complete dataset](https://www.kaggle.com/trolukovich/steam-games-complete-dataset)
+```{r}
+raw_data_2 = as_tibble( read.csv("steam_games.csv") ) %>%
+  select(-url, -recent_reviews, -all_reviews, -mature_content,
+         -minimum_requirements, -recommended_requirements, -discount_price) #%>%
+  # TODO se si riesce a trasformare la data in data bene altrimenti bene uguale
+  #replace_na(list(release_date = "NA")) %>%
+  #mutate_at(vars(release_date), ~replace(., is.nan(.), "NA")) %>%
+  #mutate( across(
+  #  c(release_date),
+  #  function(x) {
+  #    if (is.character(x) && x != "NA" && x != "NaN" ) {
+  #      parse_date(x, "%b %d, %Y",locale=locale("en"))
+  #    } else {
+  #      return(NA) 
+  #    }} )
+  #  )
+
+head(raw_data_2)
+colnames(raw_data_2)
+dim(raw_data_2)
+nrow(raw_data_2 %>% distinct(name))
+```
+
+Cerchiamo di capire come distinguere DLC dal resto...
+```{r}
+raw_data_2 %>%
+  filter(types == "app") %>%
+  #filter(grepl("Elder Scrolls",name))
+  #filter(grepl("DLC",desc_snippet))
+  #filter(grepl("DLC",game_details))
+  #filter(grepl("DLC",genre))
+  #filter(grepl("DLC",game_description))
+  filter(grepl("DLC",popular_tags))
+```
+sembra che ci siano solo giochi (alcuni contengono i DLC, GOTY Edition, etc)
+
+
+```{r}
+# TODO REMOVE
+colnames(raw_data)
+colnames(raw_data_2)
+```
+
+
+```{r}
+games_info_raw =
+  raw_data %>%
+  distinct(game.title) %>%
+  arrange(game.title) %>%
+  left_join(raw_data_2, by=c("game.title"="name")) %>%
+  group_by(game.title) %>%
+  slice(1)
+games_info_raw
+  
+# TODO REMOVE
+#dim(raw_data %>% distinct(game.title))
+#dim(games_info)
+```
+
+Ma di quanti abbiamo effettivamente i dati
+```{r}
+games_info_raw %>%
+  filter(!is.na(types))
+```
+meno di 2000
+Questi giochi appartengono a quanti dei giocatori?
+```{r}
+data = raw_data %>%
+  right_join(
+    games_info_raw %>%
+      filter(!is.na(types)) %>%
+      filter(release_date != "NaN") %>%
+      filter(release_date != "NA") %>%
+      select(game.title),
+    by = "game.title"
+    )
+
+data
+data %>% distinct(user.id)
+data %>% distinct(game.title)
+data %>% filter(behavior.name == "play")
+data %>% filter(behavior.name == "purchase")
+```
+quindi lavorerei con oltre 10k persone e circa 2k giochi con oltre 90k interazioni tra user-game (di cui 35k play e 55k purchase)
+QUESTI SONO I VERI DATI DI PARTENZA
+
+```{r}
+games_info = games_info_raw %>%
+  right_join(data %>% distinct(game.title), by="game.title")
+  
+games_info
+write.csv(games_info, "games_info.csv", row.names = F)
+```
+
+```{r}
+users_info =
+  raw_data %>%
+  right_join(data %>% select(user.id, game.title, behavior.name), by=c("user.id","game.title","behavior.name"))
+users_info
+write.csv(users_info, "users_info.csv", row.names = F)
 ```
 
 
@@ -212,18 +341,22 @@ raw_data %>% head()
 
 
 
+# TODO
+Grafico "scatter" in cui X e' asse temporale le palle sono i giochi
+il diametro e' il (log) numero di giocatori
+colore potrebbe essere il genere
+y il numero di ore totali dei giocatori
 
+```{r}
+games_info = read.csv("games_info.csv")
+games_info
+users_info = read.csv("users_info.csv")
+users_info
+```
 
-
-
-
-
-
-
-
-
-
-
+```{r}
+games_info 
+```
 
 
 
