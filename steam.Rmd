@@ -267,6 +267,13 @@ raw_data_2 %>%
 ```
 sembra che ci siano solo giochi (alcuni contengono i DLC, GOTY Edition, etc)
 
+Cerchiamo di capire come distinguere DLC dal resto...
+```{r}
+raw_data_2 %>%
+  #filter(types == "app") %>%
+  filter(grepl("Elder Scrolls",name))
+  #filter(grepl("DLC",desc_snippet))
+```
 
 ```{r}
 # TODO REMOVE
