@@ -503,7 +503,44 @@ game_times %>%
 ```
 
 Ora raccolgo tutti tutti i generi
-e vedo quante volte ciascuno compare nei tatg
+e vedo quante volte ciascuno compare nei tag
+```{r}
+genres =
+  tibble(
+    games_info %>%
+      pull(genre) %>%
+      str_split(pattern = ",") %>%
+      unlist()
+  ) %>%
+  select(genre=1) %>%
+  group_by(genre) %>%
+  count(name="count") %>%
+  arrange(desc(count)) %>%
+  filter(genre != "")
+    
+genres %>%
+  ggplot(aes(x=count, y=reorder(genre, count), color=genre, fill=genre)) +
+  geom_bar(stat="identity", show.legend = F)
+```
+poi verifico se i giochi più popolari sono dei generi più popolari
+```{r}
+game_times %>%
+  slice_max(players, n=10)
+
+```
+Ovviamente no perchè il genere più popolare è Indie, fanno tanti giochi ma ciascun gioco non è super famoso (di solito) o comunque non al pari di FTP AAA ad es Dota2 e TeamFortress2
+
+
+
+
+
+  
+
+
+
+
+
+
 
 
 
