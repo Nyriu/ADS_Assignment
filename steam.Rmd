@@ -10,9 +10,12 @@ output:
 ```{r warning=FALSE, error=FALSE, echo=F, show=F, include=F}
 #library(rrecsys)
 library(readr)
+library(stringr)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
+library(ggrepel)
+library(gganimate)
 library(plotly)
 library("RColorBrewer")
 ```
@@ -373,44 +376,134 @@ colore potrebbe essere il genere
 y il numero di ore totali dei giocatori
 
 ```{r}
-
-games_info %>%
-  select(game.title, release_date) %>%
+game_times = games_info %>%
+  select(game.title, release_date, genre) %>%
   right_join(users_info %>% filter(behavior.name == "play") %>% distinct(user.id, game.title, value), by="game.title") %>%
   group_by(game.title) %>%
-  summarize(players=n(),total_time = sum(value), release_date, .groups="keep") %>%
-  distinct(game.title, players, total_time, release_date) %>%
-  
-  ggplot(aes(x=release_date, y=log(total_time), alpha=players)) +
-  #ggplot(aes(x=release_date, y=log(total_time), diameter=players)) +
-  #ggplot(aes(x=release_date, alpha=log(total_time), y=players)) + # brutto
-  geom_point()
+  summarize(players=n(),total_time = sum(value), release_date, .groups="keep", genre) %>%
+  ungroup() %>%
+  mutate( main_genre = 
+      unlist( lapply(genre, 
+             function(x) {
+               unlist(str_split(x, pattern=","))[[1]]
+             } ))) %>%
+  filter(main_genre != "") %>%
+  distinct(game.title, players, total_time, release_date, genre, main_genre) %>%
+  mutate(relative_time = total_time/players)
+game_times
 
-# TODO add over con ingrossamento del pallino overato
-# TODO add nomi fissi a quelli piu' interessanti
+particular_games =
+      rbind(
+        game_times %>% slice_max(total_time, n=3),
+        game_times %>% slice_max(relative_time, n=2),
+        
+        #game_times %>% slice_min(total_time, n=2) %>% sample_n(size=2),
+        game_times %>% filter(game.title == "A-Train8"),
+        game_times %>% filter(game.title == "Tiamat X"),
+        
+        game_times %>% slice_max(release_date, n=1),
+        game_times %>% slice_min(release_date, n=2)
+      )
+particular_games
 ```
 
 
+```{r}
+game_times %>%
+  ggplot(aes(x=release_date, y=log(total_time))) +
+  geom_point(aes(alpha=players)) +
+  geom_label_repel(
+    data=particular_games,
+    aes(label = game.title),
+    box.padding   = 0.35, 
+    point.padding = 0.5,
+    segment.color = 'black') +
+  #scale_x_date(breaks="month", labels=date_format("%b")) + # TODO add tick under older games
+  theme_classic()
+
+# TODO add over con ingrossamento del pallino overato
+# TODO add nomi fissi a quelli piu' interessanti
+
+game_times %>%
+  ggplot(aes(x=release_date, y=log(relative_time))) +
+  geom_point(aes(alpha=players)) +
+  geom_label_repel(
+    data=particular_games,
+    aes(label = game.title),
+    box.padding   = 0.35, 
+    point.padding = 0.35,
+    segment.color = 'black') +
+  theme_classic()
+
+# TODO add transition from one to another
+# TODO aggiungere colori
+```
+Il second è Come prima ma tempo/numero di utenti
+Quindi capisco se certi giochi portano le persone a giocare di più
+
+
+TODO fare commento sul fatto che il tizio di Eastside Hockey Manager ha giocato di più giocatori messi assieme
 
 
 
 
 
 
+```{r}
+# TODO REMOVE
+# Analisi dei generi (circa)
+
+#games_info[1:10,] %>%
+games_info %>%
+  select(game.title, genre) %>%
+  mutate( main_genre = 
+      unlist( lapply(genre, 
+             function(x) {
+               unlist(str_split(x, pattern=","))[[1]]
+             } ))
+  ) %>% distinct(main_genre) %>% arrange(main_genre)
+
+game_times %>% distinct(main_genre) %>% arrange(main_genre)
+```
+
+```{r}
+
+game_times %>%
+#game_times[1:100,] %>%
+  filter(
+    main_genre != "Animation & Modeling" &
+    main_genre != "Audio Production" &
+    main_genre != "Design & Illustration" &
+    main_genre != "Utilities" &
+    main_genre != "Web Publishing" &
+    main_genre != "Sports" &
+    main_genre != "Massively Multiplayer"
+           ) %>%
+  ggplot(aes(x=release_date, y=log(players))) +
+  geom_point(aes(color=main_genre), show.legend = F) +
+  theme_classic() +
+  facet_wrap( ~ main_genre)
+  #transition_states(main_genre,
+  #                  transition_length = 1,
+  #                  state_length = 3) +
+  ##view_follow( fixed_x = T)
+  #view_follow( fixed_y = T)
+  
+
+```
 
 
+```{r}
+game_times %>%
+  select(main_genre) %>%
+  group_by(main_genre) %>%
+  count(name="count") %>%
+  ggplot(aes(y = reorder(main_genre, count), x = count, color=main_genre, fill=main_genre)) +
+  geom_bar(stat = "identity", show.legend = F)
+```
 
-
-
-
-
-
-
-
-
-
-
-
+Ora raccolgo tutti tutti i generi
+e vedo quante volte ciascuno compare nei tatg
 
 
 
