@@ -13,8 +13,10 @@ library(readr)
 library(stringr)
 library(tidyr)
 library(dplyr)
+library(igraph)
 library(ggplot2)
 library(ggrepel)
+library(ggraph)
 library(gganimate)
 library(plotly)
 library("RColorBrewer")
@@ -529,6 +531,63 @@ game_times %>%
 
 ```
 Ovviamente no perchè il genere più popolare è Indie, fanno tanti giochi ma ciascun gioco non è super famoso (di solito) o comunque non al pari di FTP AAA ad es Dota2 e TeamFortress2
+
+TODO qua si possono fare ancora cose con i tag
+
+
+# Provo a fare la rete
+due tipi di nodi "games" "players"
+grafo bipartito
+```{r}
+
+games_gamers_graph =
+graph_from_data_frame(
+  users_info %>%
+    distinct(user.id, game.title) #%>% slice(1:1000)
+)
+
+games_gamers_graph %>%
+  ggraph() + 
+  
+  #geom_edge_hive() +
+  #geom_edge_arc() +
+  geom_edge_link() + 
+  
+  geom_node_point() +
+  
+  coord_polar() +
+  theme_graph()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
