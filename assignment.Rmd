@@ -212,7 +212,9 @@ Dal plot possiamo notare che:
 3. chi ha piu' giochi e' chi ha speso piu' soldi
 4. la maggior parte dei giocatori ha speso poco e ha giocato poco
 
-```{r echo=F}
+![](users_animate_01.gif)
+
+```{r echo=F, eval=F, include=F}
 to_plot =
   rbind(
     cbind(
@@ -260,8 +262,6 @@ to_plot %>%
 # TODO plot fermi dei due stati == log e == default (dopo aver fixato label etc)
 ```
 
-
-
 ```{r eval=F, include=F}
 ## Qua si puo' dire che chi spende di piu' non e' chi gioca di piu'. ANZI!
 to_plot %>%
@@ -288,7 +288,63 @@ to_plot %>%
     segment.color = 'grey50') #+
 ```
 
+# What about the highlited gamers
+```{r include=F}
+## Creare dati per pie di tempo e soldi
+pie_data =
+users_info %>%
+  filter(behavior.name == "play") %>%
+  right_join(
+    rbind(
+      users_clust_data %>% slice_max(titles, n=2),
+      users_clust_data %>% slice_max(hours,  n=2),
+      users_clust_data %>% slice_max(capital,  n=2) ) %>%
+      distinct(user.id, .keep_all = T),
+    by="user.id"
+  ) %>%
+  left_join(
+    games_prices,
+    by="game.title"
+  ) %>%
+  select(-behavior.name, -original_price) %>%
+  group_by(user.id) %>%
+  mutate(hours_total = sum(value)) %>%
+  ungroup() %>%
+  mutate(hours_perc = value/hours_total, hours=value, capital_perc=price/capital) %>%
+  select(user.id, game.title, price, hours, hours_perc, capital_perc, hours_total, capital)
+```
 
+
+```{r}
+to_plot =
+  pie_data %>%
+  mutate(label=scales::percent(hours_perc)) %>%
+  mutate(label=paste(label, paste(hours,"h",sep=""), sep="\n")) %>%
+  arrange(desc(game.title)) %>%
+  mutate(lab.ypos = cumsum(hours_perc) - hours_perc/2)
+
+# TODO collassare per ciascuno "Others"
+
+
+to_plot %>%
+  #filter(user.id == 100630947) %>% # TODO remove
+  ggplot(aes(x = "", y = hours_perc, fill = game.title)) + # TODO do the same with capital_perc
+  geom_bar(width = 1, stat = "identity", color = "white", show.legend = F) +
+  coord_polar("y") +
+  geom_text(aes(x=0.3 + (1-hours_perc*.6), y = lab.ypos, label = label), color = "black") +
+  facet_wrap(~user.id) +
+  
+  #scale_fill_manual(values= brewer.pal(n = 5, name = "RdBu")) +
+  #scale_fill_manual(values= brewer.pal(n = 5, name = "Dark2")) +
+  #scale_fill_manual(values= brewer.pal(n=nrow(to_plot), name = "Pastel1")) +
+  #scale_fill_manual(values= brewer.pal(n = 5, name = "Pastel2")) +
+  
+  #labs( # TODO fix
+  #  title = paste("Play Time of User", user_play_time %>% pull(user.id)),
+  #  fill="Game Titles"
+  #  ) + 
+  theme_void()
+```
 
 
 
