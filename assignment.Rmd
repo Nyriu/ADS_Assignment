@@ -1,0 +1,216 @@
+---
+title: "Assignment"
+author: "Tristano Munini"
+date: "15/02/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r warning=FALSE, error=FALSE, echo=F, show=F, include=F}
+# TODO check which are needed
+#library(rrecsys)
+library(readr)
+library(stringr)
+library(tidyr)
+library(dplyr)
+library(igraph)
+library(ggplot2)
+library(ggrepel)
+library(ggraph)
+library(gganimate)
+library(plotly)
+library("RColorBrewer")
+
+library(formattable)
+```
+
+## Introduction
+
+TODO
+
+## Datasets
+
+### Downloaded
+
+The first dataset considered is the [Steam Video Games Dataset](https://www.kaggle.com/tamber/steam-video-games).
+This dataset is a list of user behaviors, with columns: user-id, game-title, behavior-name, value. The behaviors included are 'purchase' and 'play'. The value indicates the degree to which the behavior was performed. In the case of 'purchase' the value is always 1, and in the case of 'play' the value represents the number of hours the user has played the game.
+```{r echo=F}
+raw_data = as_tibble(
+  read.csv("steam-200k.csv", header=F,
+           col.names = c( "user-id","game-title", "behavior-name", "value", "unknown")
+           )
+  ) %>% select(-unknown)
+formattable(head(raw_data))
+```
+```{r include=F, eval=F}
+raw_data
+dim(raw_data)
+raw_data %>% distinct(user.id)
+raw_data %>% distinct(game.title)
+raw_data %>% distinct(user.id, game.title) %>% group_by(user.id) %>% count() %>%
+  ggplot(aes(x=n)) +
+  geom_bar()
+raw_data %>% distinct(user.id, game.title) %>% group_by(user.id) %>% count() %>%
+  ggplot(aes(x=n)) +
+  geom_boxplot()
+```
+
+
+```{r include=F, eval=F}
+summary(raw_data %>% distinct(user.id, game.title) %>% group_by(user.id) %>% count() %>% ungroup() %>% select(n))
+e1071::skewness( raw_data %>% distinct(user.id, game.title) %>% group_by(user.id) %>% count() %>% pull(n))
+```
+```{r include=F, eval=F}
+raw_data %>% filter(behavior.name == "play") %>% select(user.id, value) %>% group_by(user.id) %>% summarize(value=sum(value)) %>% ungroup()
+summary(
+  raw_data %>% filter(behavior.name == "play") %>% select(user.id, value) %>% group_by(user.id) %>% summarize(value=sum(value)) %>% ungroup()
+)
+
+# users with most games and playtime
+raw_data %>% distinct(user.id, game.title, value) %>% group_by(user.id) %>%
+  summarize(playtime=sum(value), games.num=n()) %>%
+  ungroup() %>%
+  slice_max(games.num, n=3)
+raw_data %>% distinct(user.id, game.title, value) %>% group_by(user.id) %>%
+  summarize(playtime=sum(value), games.num=n()) %>%
+  ungroup() %>%
+  slice_max(playtime, n=3)
+```
+
+
+The dataset contains 200k entries relative to over 12k different users and over 5k games.
+The skewness of the data, equal to 10.74, is evident, with a median of 2 and a mean of 10 game purchases per user.
+Also the playtime has a high variability between gamers: from users that played for less than 5 minutes, to users with thousands and thousands of hours.
+The user with the highest number of games has 1552 games with a playtime of 6778 hours.
+Instead the user that spent the highest number of hours playing spent 11906 hours on 433 different games.
+Sadly the dataset does not contain the period in which the hours were spent.
+
+<!-- #### 2 -->
+
+[Steam games complete dataset](https://www.kaggle.com/trolukovich/steam-games-complete-dataset) is the second dataset used.
+In this one are listed 40k games, each with a set of information about the genre, the developer, associated tags, description, and others.
+For the purpose of this assignment we are interested only in a subset of the columns, for example the url to the Steam page is not useful for us.
+Follows a glimpse of the data.
+```{r echo=F}
+raw_data_2 = as_tibble( read.csv("steam_games.csv") ) %>%
+  select(name, release_date, genre, developer, publisher, everything(),
+         -url, -recent_reviews, -all_reviews, -mature_content,
+         -minimum_requirements, -recommended_requirements, -discount_price)
+
+formattable(head(raw_data_2 %>% select(name, release_date, genre, developer)))
+```
+
+### Analyzed
+
+Because I was interested in following the connections between gamers and type of games played I've created two sub datasets:
+<!-- TODO add link to github? -->
+*users_info.csv* is a subset of the first one, while *games_info.csv* is a subset of the second.
+They were created joining the initial datasets in a way that, for now on, only games with players will be considered and only player that play games for which we actually have details.
+Summing up we consider 2k games and 10k users, with over 90k user-game interactions (either "purchase" or "play").
+Every users plays at least one of the 2k games and every game has at least a player.
+
+```{r eval=F, include=F}
+games_info_raw =
+  raw_data %>%
+  distinct(game.title) %>%
+  arrange(game.title) %>%
+  left_join(raw_data_2, by=c("game.title"="name")) %>%
+  group_by(game.title) %>%
+  slice(1)
+data = raw_data %>%
+  right_join(
+    games_info_raw %>%
+      filter(!is.na(types)) %>%
+      filter(release_date != "NaN") %>%
+      filter(release_date != "NA") %>%
+      select(game.title),
+    by = "game.title"
+    )
+games_info = games_info_raw %>%
+  right_join(data %>% distinct(game.title), by="game.title")
+#write.csv(games_info, "games_info.csv", row.names = F)
+users_info =
+  raw_data %>%
+  right_join(data %>% select(user.id, game.title, behavior.name), by=c("user.id","game.title","behavior.name"))
+#write.csv(users_info, "users_info.csv", row.names = F)
+```
+
+```{r error=F, warning=F, include=F}
+games_info = read.csv("games_info.csv") %>%
+  # date as date and not as char
+  mutate( across(
+    c(release_date),
+    function(x) {
+        parse_date(x, "%b %d, %Y",locale=locale("en"))
+      }) )
+games_info
+users_info = read.csv("users_info.csv")
+users_info
+```
+
+
+## About the users
+### Type of gamers
+
+
+
+
+
+
+
+## About the games
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
