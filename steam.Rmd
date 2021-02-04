@@ -354,7 +354,7 @@ write.csv(users_info, "users_info.csv", row.names = F)
 
 
 # I VERI DATI
-```{r}
+```{r error=F, warning=F}
 games_info = read.csv("games_info.csv") %>%
   # date as date and not as char
   mutate( across(
