@@ -25,6 +25,7 @@ library(plotly)
 library("RColorBrewer")
 
 library(formattable)
+## TODO add pretty images lib
 ```
 
 ## Introduction
@@ -152,8 +153,140 @@ users_info
 ```
 
 
+
 ## About the users
+
 ### Type of gamers
+```{r include=F}
+games_prices = games_info %>%
+  select(game.title, original_price) %>%
+  mutate(
+    price = 
+      unlist( lapply(
+        original_price,
+        function (x) {
+          y = str_remove(x, "[$]")
+          tryCatch(
+            as.double(y),
+            error=function(z) 0,
+            warning=function(z) 0
+          )
+        }
+      )) %>% replace_na(0)
+  )
+
+users_clust_data =
+  left_join(
+    users_info %>%
+      filter(behavior.name == "purchase") %>%
+      right_join(
+        games_prices %>% select(-original_price),
+        by="game.title"
+      ) %>%
+      group_by(user.id) %>%
+      summarize(titles=n(), capital=sum(price), .groups="keep") %>%
+      ungroup(),
+    users_info %>%
+      filter(behavior.name == "play") %>%
+      group_by(user.id) %>%
+      summarize(hours=sum(value), .groups="keep") %>%
+      ungroup(),
+    by="user.id"
+  ) %>%
+  # Not zero but small value for log
+  replace_na(list(titles=0.0001, hours=0.0001)) %>%
+  mutate(capital=capital+0.0001)
+
+users_clust_log_data =
+  users_clust_data %>%
+  mutate(titles = log(titles), hours = log(hours), capital=capital)
+
+users_kmeans_3 = kmeans(users_clust_log_data, centers=3, nstart=5, iter.max = 200)
+```
+
+**TODO** tradurre ed estendere
+
+Dal plot possiamo notare che:
+1. il clustering ha piu' senso se osserviamo "default"
+2. chi ha piu' ore non e' chi ha piu' giochi
+3. chi ha piu' giochi e' chi ha speso piu' soldi
+4. la maggior parte dei giocatori ha speso poco e ha giocato poco
+
+```{r echo=F}
+to_plot =
+  rbind(
+    cbind(
+      users_clust_data %>% mutate(scale="default"),
+      cluster=as.factor(users_kmeans_3$cluster)),
+    cbind(
+      users_clust_log_data %>% mutate(scale="log"),
+      cluster=as.factor(users_kmeans_3$cluster)
+    )
+  ) %>%
+  mutate(scale = as.factor(scale))
+
+to_plot_particular =
+  rbind(
+    to_plot %>% filter(scale=="default") %>% slice_max(titles, n=2),
+    to_plot %>% filter(scale=="default") %>% slice_max(hours,  n=2),
+    to_plot %>% filter(scale=="default") %>% slice_max(capital,  n=2),
+    to_plot %>% filter(scale=="log") %>% slice_max(titles, n=2),
+    to_plot %>% filter(scale=="log") %>% slice_max(hours,  n=2),
+    to_plot %>% filter(scale=="log") %>% slice_max(capital,  n=2)
+  ) %>% arrange(user.id) %>%
+  distinct(user.id,scale, .keep_all = T)
+ 
+# TODO fix labels/titles
+to_plot %>%
+  ggplot(aes(x=titles, y=hours)) +
+  geom_point(aes(alpha=capital, color=cluster)) +
+  geom_label_repel(
+    data=to_plot_particular,
+    aes(label = user.id),
+    box.padding   = 0.35, 
+    point.padding = 0.35,
+    segment.color = 'grey50'
+    ) +
+  transition_states(scale,
+                    transition_length = 2,
+                    state_length = 2) +
+  ease_aes('cubic-in-out') +
+  view_follow() +
+  ggtitle('Now showing {closest_state}',
+          subtitle = 'Frame {frame} of {nframes}') +
+  theme_minimal()
+  #theme_grey()
+
+# TODO plot fermi dei due stati == log e == default (dopo aver fixato label etc)
+```
+
+
+
+```{r eval=F, include=F}
+## Qua si puo' dire che chi spende di piu' non e' chi gioca di piu'. ANZI!
+to_plot %>%
+  filter(scale=="default") %>%
+  ggplot(aes(x=titles, y=capital)) +
+  geom_point() +
+  geom_label_repel(
+    data=to_plot_particular %>% filter(scale=="default"),
+    aes(label = user.id),
+    box.padding   = 0.35, 
+    point.padding = 0.35,
+    segment.color = 'grey50') #+
+
+to_plot %>%
+  filter(scale=="default") %>%
+  #ggplot(aes(x=hours, y=capital)) +
+  ggplot(aes(x=capital, y=hours)) +
+  geom_point() +
+  geom_label_repel(
+    data=to_plot_particular %>% filter(scale=="default"),
+    aes(label = user.id),
+    box.padding   = 0.35, 
+    point.padding = 0.35,
+    segment.color = 'grey50') #+
+```
 
 
 
@@ -161,7 +294,53 @@ users_info
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--
 ## About the games
+### text mining su descrizioni per capire se c'e' combo "vincente"
+
+## About user-games interactions
+### rete in cui grossezza link e' ore giocate
+### analisi dei giochi "centrali"
+
+### poi collego anche i tag analisi dei tag "centrali"
+
+
+### possibile recsys
+```{r}
+## TODO is good idea?
+# Rearrange user_info: rows = users, columns=games
+# consider only play
+
+#  users_info[1:100,] %>%
+#  filter(behavior.name == "play") %>%
+#  distinct(user.id, game.title, value) %>%
+#  spread(game.title, value)
+```
+-->
 
 
 
