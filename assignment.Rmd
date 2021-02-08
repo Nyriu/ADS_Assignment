@@ -19,6 +19,7 @@ library(dplyr)
 library(igraph)
 library(ggplot2)
 library(ggExtra)
+library(packcircles)
 library(ggrepel)
 library(ggraph)
 library(gganimate)
@@ -573,9 +574,104 @@ gm
 TODO commentare
 
 
-
-
 Il tempo di gioco rispetto ai generi fa notare qualche cosa? il genere più popolare (persone che gli hanno dato una possibilità/comprato) è anche quello più giocato (comprato ed effettivamente apprezzato molto)?
+```{r include=F}
+# trovo numero min e max di generi associati ad un gioco
+#about_genres_data = 
+games_info %>%
+  select(game.title, genre) %>%
+  mutate( genre_num = 
+      unlist( lapply(genre, 
+             function(x) {
+               l = unlist(str_split(x, pattern=","))
+               if (l[[1]] == "") {
+                 return(0)
+               }
+               return(length(unlist(str_split(x, pattern=","))))
+             } ))) %>%
+  count(genre_num) %>%
+  ggplot(aes(x=genre_num, y=n)) +
+  geom_bar(stat = "identity", show.legend = F)
+```
+```{r echo=F}
+# trovo quanti generi differenti
+to_plot =
+  data.frame(genre = 
+     unlist( lapply( games_info %>% pull(genre),
+                     function(x) {
+                       unlist(str_split(x, pattern=","))
+                     } )
+  )) %>%
+  count(genre) %>%
+  #mutate(n=log(n))
+  #mutate(n=sqrt(n))
+  mutate(label=ifelse(n < 20, "", genre))
+
+packing <- circleProgressiveLayout(to_plot$n, sizetype='area')
+to_plot <- cbind(to_plot, packing)
+
+dat.gg <- circleLayoutVertices(packing, npoints=50)
+
+ggplot() +
+  # Make the bubbles
+  geom_polygon(data = dat.gg, aes(x, y, group = id, fill=as.factor(id)), colour = "black", alpha = 0.6) +
+  # Add text in the center of each bubble + control its size
+  geom_text(data = to_plot, aes(x, y, size=n, label = label)) +
+  scale_size_continuous(range = c(1,4)) +
+  # General theme:
+  theme_void() + 
+  theme(legend.position="none") +
+  coord_equal()
+
+print(
+  paste(nrow(to_plot), "generi differenti") # TODO Add as title
+)
+
+# TODO capire se si reisce a dinamicizzare con hover decente
+#gp = ggplotly(p, tooltip = c("label")) %>%
+#  config(displayModeBar = FALSE) %>%
+#  layout(yaxis = list(fixedrange = TRUE),
+#         xaxis = list(fixedrange = TRUE))
+#gp
+```
+
+
+
+```{r}
+# Ref to
+#Il tempo di gioco rispetto ai generi fa notare qualche cosa? il genere più popolare (persone che gli hanno dato una possibilità/comprato) è anche quello più giocato (comprato ed effettivamente apprezzato molto)?
+
+genres_playtime =
+  data.frame(genre = 
+     unlist( lapply( games_info %>% pull(genre),
+                     function(x) {
+                       unlist(str_split(x, pattern=","))
+                     } )
+  )) %>%
+  arrange(genre) %>%
+  count(genre) %>%
+  mutate(playtime_abs=0)
+
+has_genre = function(x) {
+  grepl(g, x, fixed = TRUE)
+}
+
+for (g in genres_playtime$genre[1:2]) {
+# TODO sommare le ore dei giochi con il genere considerato
+  print(g)
+  k = nrow(
+    games_info %>%
+      select(has_genre(genre))
+  )
+}
+
+  
+```
+
+
+
+
+
 
 Come è variata la popolarità dei generi negli anni? (bel grafico animato)
 
