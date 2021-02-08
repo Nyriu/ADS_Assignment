@@ -18,6 +18,7 @@ library(tidyr)
 library(dplyr)
 library(igraph)
 library(ggplot2)
+library(ggExtra)
 library(ggrepel)
 library(ggraph)
 library(gganimate)
@@ -456,12 +457,13 @@ p =
   geom_point(aes(alpha=0.2)) +
   geom_rug() +
   facet_wrap(~user.id, scale="free_x")
-p
+#p
 
-gp = ggplotly(p, tooltip = c("text")) %>%
+# TODO title and labels
+gp = ggplotly(p, tooltip = c("text")) #%>%
   #config(displayModeBar = FALSE) %>%
-  layout(yaxis = list(fixedrange = TRUE),
-         xaxis = list(fixedrange = TRUE))
+  #layout(yaxis = list(fixedrange = TRUE),
+  #       xaxis = list(fixedrange = TRUE))
 
 #gp$x$attrs[['27083d1c5a80']]
 #gp$x$attrs[['2708284a5c83']]
@@ -474,33 +476,108 @@ gp = ggplotly(p, tooltip = c("text")) %>%
 gp
 
 ```
+**TODO** commento sul grafico sopra
 
-
+* sembra non esser vero che più spendi più giochi
 
 
 
 ### TODO other on players?
+**TODO**?
+
+
+
+
+
 
 ## About the games
 
-```{r}
+Giochi usciti recentemente vengono giocati di più?
 
-# TODO just for ref
-#game_times %>%
-#  ggplot(aes(x=release_date, y=log(relative_time))) +
-#  geom_point(aes(alpha=players)) +
-#  geom_label_repel(
-#    data=particular_games,
-#    aes(label = game.title),
-#    box.padding   = 0.35, 
-#    point.padding = 0.35,
-#    segment.color = 'black') +
-#  theme_classic()
+* Sia rispetto al valore assoluto (somma totale delle ore)
+* sia tempo medio
 
+Oppure ci sono picchi di giocatori nei tempi sucessivi al rilascio e poi paino piano sfuma? TODO dire che questa è una domanda senza risposta per i dati che abbiamo oppure trovare qualcosa di simile
+
+```{r include=F}
+to_plot =
+games_info %>%
+  left_join(users_info %>% filter(behavior.name == "play"), by="game.title") %>%
+  select(game.title, release_date, value) %>%
+  group_by(game.title) %>%
+  summarize(playtime=sum(value), release_date = release_date, .groups="keep") %>%
+  slice(1) %>%
+  ungroup() %>%
+  replace_na(list(playtime=0)) %>%
+  
+  left_join(
+    users_info %>%
+      filter(behavior.name == "purchase") %>%
+      select(game.title, value) %>%
+  group_by(game.title) %>%
+  summarize(purchases=sum(value), .groups="keep") %>%
+  ungroup(), by="game.title") %>%
+  select(game.title, release_date, everything()) %>%
+  
+  filter(!is.na(release_date))
+
+to_plot
 ```
 
 
 
+```{r echo=F}
+# TODO fix font stuff
+#extrafont::loadfonts(device="win")
+#extrafont::font_import("C:/Windows/Fonts/", pattern = "RobotoCondensed")
+#library(ggplot2)
+
+p = to_plot %>%
+  ggplot(aes(x=release_date, y=log(playtime + 0.0001),
+             label=game.title, text=game.title#,
+             #color=log(purchases), alpha=log(purchases))) +
+             #alpha=log(purchases))) +
+             )) +
+  geom_point( aes(alpha=log(purchases)), color="slateblue") +
+  theme_minimal() +
+  #theme( title = "lolloni", legend.position="bottom") +
+  theme(
+    #title = element_text("TODO TITOLONE"), # TODO fix fonts
+    #legend.title = element_text("log(num) Purchases"), # TODO fix fonts
+    legend.position="bottom") +
+  xlab("Release Date") +
+  ylab("Playtime in log(hours)") +
+  geom_label_repel(
+    data=to_plot %>% slice_max(purchases, n=2),
+    box.padding   = 0.35, 
+    point.padding = 0.25,
+    segment.color = 'grey50'
+    ) +
+  geom_label_repel(
+    data=to_plot %>% slice_max(release_date, n=1),
+    box.padding   = 0.25, 
+    point.padding = 0.75,
+    segment.color = 'grey50'
+    ) +
+  geom_label_repel(
+    data=to_plot %>% slice_min(release_date, n=2),
+    box.padding   = 0.45, 
+    point.padding = 0.25,
+    segment.color = 'grey50'
+    )
+gm = ggMarginal(p, type="histogram", color="white", fill="slateblue")
+gm
+```
+
+
+TODO commentare
+
+
+
+
+Il tempo di gioco rispetto ai generi fa notare qualche cosa? il genere più popolare (persone che gli hanno dato una possibilità/comprato) è anche quello più giocato (comprato ed effettivamente apprezzato molto)?
+
+Come è variata la popolarità dei generi negli anni? (bel grafico animato)
 
 
 
