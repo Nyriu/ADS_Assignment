@@ -16,6 +16,7 @@ library(readr)
 library(stringr)
 library(tidyr)
 library(dplyr)
+library(lubridate)
 library(igraph)
 library(ggplot2)
 library(ggExtra)
@@ -690,7 +691,7 @@ genres_playtime = genres_playtime %>%
 genres_playtime %>%
   ggplot(aes(x=reorder(genre, playtime_abs), y=playtime_abs)) +
   geom_bar(stat="identity", fill=alpha("steelblue", 0.5)) +
-  #geom_bar(aes(y=-(playtime_rel*playtime_rel)/7), stat="identity", fill=alpha("red", 0.5)) + # TODO transition
+  #geom_bar(aes(y=-playtime_rel*50), stat="identity", fill=alpha("red", 0.5)) + # TODO transition
   ylim(-1050000,2000000) +
   theme_minimal() +
   theme(
@@ -708,7 +709,8 @@ genres_playtime %>%
 genres_playtime %>%
   ggplot(aes(x=reorder(genre, playtime_abs), y=playtime_abs)) +
   geom_bar(stat="identity", fill=alpha("steelblue", 0.5)) +
-  geom_bar(aes(y=-(playtime_rel*playtime_rel)/7), stat="identity", fill=alpha("red", 0.5)) + # TODO transition
+  #geom_bar(aes(y=-(playtime_rel*playtime_rel)/log(playtime_rel)), stat="identity", fill=alpha("red", 0.5)) + # TODO transition
+  geom_bar(aes(y=-playtime_rel*50), stat="identity", fill=alpha("red", 0.5)) + # TODO transition
   ylim(-1050000,2000000) +
   theme_minimal() +
   theme(
@@ -729,11 +731,77 @@ genres_playtime %>%
 # TODO add title/legend?
 ```
 
+Notare come i Free2Play sono molto presenti e sono anche molto giocati! significa che la gente gioca a quelli un po' a caso tanto per
 
 
 
 
-Come è variata la popolarità dei generi negli anni? (bel grafico animato)
+Come è variata la presenza dei generi negli anni? (bel grafico animato)
+```{r include=F}
+genre_pop =
+  games_info %>%
+  filter(!is.na(release_date)) %>%
+  select(game.title, genre, release_date) %>%
+  mutate(
+    genres =
+      lapply( genre,
+              function(x) {
+                data.frame(
+                  genres = unlist(str_split(x, pattern=","))
+                )
+              }
+      )
+  ) %>%
+  unnest(genres) %>%
+  select(release_date, genre=genres) %>%
+  mutate(value=1) %>%
+  
+  arrange(genre, release_date) %>%
+  group_by(genre) %>%
+  mutate(to_date=cumsum(value)) %>%
+  filter(genre != "") %>%
+
+  # top 9
+  filter(
+    genre %in%
+      (genre_pop %>%
+         arrange(desc(to_date)) %>%
+         group_by(genre) %>%
+         slice(1) %>%
+         ungroup() %>%
+         arrange(desc(to_date)) %>% pull(genre))[1:9]
+  )
+```
+
+
+
+```{r echo=F}
+# wraps of popularity
+# TODO fix labels/title
+genre_pop %>%
+  ggplot(aes(x=release_date, y=to_date, color=genre)) +
+  geom_line(show.legend = F) + 
+  #geom_point() +
+  facet_wrap(~genre) #+ #theme_minimal()
+```
+```{r echo=F}
+
+genre_pop %>%
+#genre_pop[1:2000,] %>%
+  filter(year(release_date) > 2000 ) %>%
+  ggplot(aes(x=genre, y=to_date, fill=genre)) + 
+  geom_bar(stat='identity', show.legend = F) +
+  #theme_bw() +
+  transition_states(
+    year(release_date),
+    transition_length = 2,
+    state_length = 2
+  ) +
+  ease_aes('sine-in-out') +
+  #view_follow() + # TODO does not wokk
+  ggtitle('Now showing {closest_state}',
+          subtitle = 'Frame {frame} of {nframes}')
+```
 
 
 
@@ -743,6 +811,10 @@ Come è variata la popolarità dei generi negli anni? (bel grafico animato)
 
 
 <!--
+
+## text "mining" per capire quando e' porbabile che un gioco indie sia action/f2p
+
+
 ### text mining su descrizioni per capire se c'e' combo "vincente"
 
 ## About user-games interactions
