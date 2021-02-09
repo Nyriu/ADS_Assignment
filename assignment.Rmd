@@ -603,6 +603,7 @@ to_plot =
                      } )
   )) %>%
   count(genre) %>%
+  filter(genre != "") %>%
   #mutate(n=log(n))
   #mutate(n=sqrt(n))
   mutate(label=ifelse(n < 20, "", genre))
@@ -637,10 +638,7 @@ print(
 
 
 
-```{r}
-# Ref to
-#Il tempo di gioco rispetto ai generi fa notare qualche cosa? il genere più popolare (persone che gli hanno dato una possibilità/comprato) è anche quello più giocato (comprato ed effettivamente apprezzato molto)?
-
+```{r echo=F, warning=F}
 genres_playtime =
   data.frame(genre = 
      unlist( lapply( games_info %>% pull(genre),
@@ -648,26 +646,88 @@ genres_playtime =
                        unlist(str_split(x, pattern=","))
                      } )
   )) %>%
+  filter(genre != "") %>%
   arrange(genre) %>%
   count(genre) %>%
+  
   mutate(playtime_abs=0)
 
 has_genre = function(x) {
   grepl(g, x, fixed = TRUE)
 }
 
-for (g in genres_playtime$genre[1:2]) {
-# TODO sommare le ore dei giochi con il genere considerato
-  print(g)
-  k = nrow(
-    games_info %>%
-      select(has_genre(genre))
-  )
+for (g in genres_playtime$genre) {
+  k = games_info %>%
+      filter(has_genre(genre)) %>%
+      select(game.title) %>%
+    left_join(
+      users_info %>%
+        filter(behavior.name == "play") %>%
+        select(game.title, value),
+      by="game.title"
+    ) %>%
+    replace_na(list(value=0)) %>%
+    summarise(val = sum(value)) %>% pull()
+    
+  genres_playtime$playtime_abs[genres_playtime$genre == g] = k
 }
 
-  
-```
+genres_playtime = genres_playtime %>%
+  mutate(playtime_rel=playtime_abs/n) %>%
+  arrange(playtime_abs) %>%
+  mutate ( id = row_number() ) %>%
+  mutate(
+    angle =
+      90 - 360 * (id - 0.5) /nrow(genres_playtime)
+  ) %>%
+  mutate (
+    hjust = ifelse(angle < -90, 1, 0)
+  ) %>%
+  mutate (
+    angle = ifelse(angle < -90, angle+180, angle)
+  )
 
+genres_playtime %>%
+  ggplot(aes(x=reorder(genre, playtime_abs), y=playtime_abs)) +
+  geom_bar(stat="identity", fill=alpha("steelblue", 0.5)) +
+  #geom_bar(aes(y=-(playtime_rel*playtime_rel)/7), stat="identity", fill=alpha("red", 0.5)) + # TODO transition
+  ylim(-1050000,2000000) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(c(-0.5,-3,-3,-2), "cm") # up, right, bottom, left
+  ) +
+  coord_polar(start = 0) #+
+  #geom_text( # TODO transition
+  #  aes(y=playtime_abs + 100000, label=genre, hjust=hjust),
+  #  color="black", fontface="bold",alpha=0.6, size=2.5, angle= genres_playtime$angle#, inherit.aes = FALSE
+  #  ) 
+
+genres_playtime %>%
+  ggplot(aes(x=reorder(genre, playtime_abs), y=playtime_abs)) +
+  geom_bar(stat="identity", fill=alpha("steelblue", 0.5)) +
+  geom_bar(aes(y=-(playtime_rel*playtime_rel)/7), stat="identity", fill=alpha("red", 0.5)) + # TODO transition
+  ylim(-1050000,2000000) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(c(-0.5,-3,-3,-2), "cm") # up, right, bottom, left
+  ) +
+  coord_polar(start = 0) +
+  geom_text( # TODO transition
+    aes(y=playtime_abs + 100000, label=genre, hjust=hjust),
+    color="black", fontface="bold",alpha=0.6, size=2.5, angle= genres_playtime$angle#, inherit.aes = FALSE
+    ) 
+
+# TODO add transition adding labels then redbars
+# with smooth transition
+
+# TODO add title/legend?
+```
 
 
 
