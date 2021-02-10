@@ -17,20 +17,18 @@ library(stringr)
 library(tidyr)
 library(dplyr)
 library(lubridate)
-library(igraph)
 library(ggplot2)
 library(ggExtra)
 library(packcircles)
 library(ggrepel)
-library(ggraph)
 library(gganimate)
 library(plotly)
 library("RColorBrewer")
 
-#library(tidytext)
-#library(igraph)
-#library(tidygraph)
-#library(ggraph)
+library(tidytext)
+library(igraph)
+library(tidygraph)
+library(ggraph)
 
 
 library(formattable)
@@ -456,7 +454,7 @@ TODO Commentare il grafico
 * divertente che i due con il maggior numero di ore le hanno fatte solo su un gioco
 * i due con molti giochi hanno giocato spalmando le ore
 
-```{r}
+```{r echo=F}
 p =
   pie_data %>%
   select(user.id, game.title, price, hours) %>%
@@ -735,6 +733,8 @@ genres_playtime %>%
 # with smooth transition
 
 # TODO add title/legend?
+
+# TODO IMPORTANT URGENT
 ```
 
 Notare come i Free2Play sono molto presenti e sono anche molto giocati! significa che la gente gioca a quelli un po' a caso tanto per
@@ -793,7 +793,7 @@ genre_pop_top9 %>%
   facet_wrap(~genre) #+ #theme_minimal()
 ```
 
-```{r echo=F include=F}
+```{r echo=F, include=F}
 
 genre_pop_top9 %>%
 #genre_pop[1:2000,] %>%
@@ -1013,25 +1013,13 @@ vediamo che il legame tra ftp e mmo e' molto forte
 zoomando ancora
 
 ```{r echo=F}
-interesting_genres = c(
-  "indie"
-)
-
-
-#for (lvl in c(0,3,5,7,10,12)) {
-  
-lvl=0
 p = games_bigr_counts %>%
   filter(
-    word1 %in% interesting_genres |
-      word2 %in% interesting_genres
+    word1 == "indie" | word2 == "indie"
     ) %>%
   filter(word1 > word2) %>%
-  filter(ndivfreq > lvl) %>%
   as_tbl_graph() %>%
   ggraph(layout = "star") +
-  
-  #geom_edge_arc(aes(edge_alpha=n), color="steelblue", show.legend = F) +
   geom_edge_arc(aes(
     edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
   
@@ -1045,6 +1033,88 @@ p = games_bigr_counts %>%
 ## TODO generate until really beautiful
   plot(p)
 #}
+```
+**TODO** Commentare grafico
+
+
+
+```{r include=F}
+## Raccolgo i dati dei 3 plot
+
+d1 = games_bigr_counts %>%
+  filter(word1 > word2)
+
+d2_genres = c(
+  "indie","action", "freetoplay", "massivelymultiplayer",
+  "adventure", "casual", "rpg", "strategy"
+)
+d2 = games_bigr_counts %>%
+  filter(
+    word1 %in% d2_genres |
+    word2 %in% d2_genres
+    ) %>%
+  filter(word1 > word2) %>%
+  filter(ndivfreq > 5)
+  
+d3 = games_bigr_counts %>%
+  filter(
+    word1 == "indie" | word2 == "indie"
+    ) %>%
+  filter(word1 > word2)
+  
+d123 = rbind(
+  d1 %>% mutate(dnum=1),
+  d2 %>% mutate(dnum=2),
+  d3 %>% mutate(dnum=3)
+)
+g123 = d123 %>%
+  as_tbl_graph()
+
+g1 = d1 %>% as_tbl_graph()
+g2 = d2 %>% as_tbl_graph()
+g3 = d3 %>% as_tbl_graph()
+```
+
+
+```{r include=F}
+p1 = g1 %>%
+  ggraph(layout = "fr") +
+  geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
+  geom_node_text(aes(label = name)) +
+  theme_void()
+p2 = g2 %>%
+  ggraph(layout = "fr") +
+  geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
+  geom_node_text(aes(label = name)) +
+  theme_void()
+p3 = g3 %>%
+  ggraph(layout = "fr") +
+  geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
+  geom_node_text(aes(label = name)) +
+  theme_void()
+```
+
+
+```{r include=F}
+#graph123 %>%
+g123 %>%
+  ggraph(layout = "fr") +
+  geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
+  geom_node_text(aes(label = name)) +
+  theme_void() +
+
+  transition_states(dnum,
+                    transition_length = 2,
+                    state_length = 2) +
+  #ease_aes('cubic-in-out') +
+  ease_aes("quadratic-in-out") +
+  enter_fade() +
+  exit_fade() +
+  view_zoom() +
+  #view_follow() +
+  ggtitle('Now showing {closest_state}',
+          subtitle = 'Frame {frame} of {nframes}')
+  
 ```
 
 
@@ -1060,13 +1130,16 @@ p = games_bigr_counts %>%
 
 
 <!--
-
 ## text "mining" per capire quando e' porbabile che un gioco indie sia action/f2p
 
 
 ### text mining su descrizioni per capire se c'e' combo "vincente"
+-->
 
 ## About user-games interactions
+
+
+<!--
 ### rete in cui grossezza link e' ore giocate
 ### analisi dei giochi "centrali"
 
