@@ -767,7 +767,7 @@ genre_pop =
   mutate(to_date=cumsum(value)) %>%
   filter(genre != "")
 
-genre_pop =
+genre_pop_top9 =
   genre_pop %>%
   # top 9
   filter(
@@ -786,7 +786,7 @@ genre_pop =
 ```{r echo=F}
 # wraps of popularity
 # TODO fix labels/title
-genre_pop %>%
+genre_pop_top9 %>%
   ggplot(aes(x=release_date, y=to_date, color=genre)) +
   geom_line(show.legend = F) + 
   #geom_point() +
@@ -795,7 +795,7 @@ genre_pop %>%
 
 ```{r echo=F include=F}
 
-genre_pop %>%
+genre_pop_top9 %>%
 #genre_pop[1:2000,] %>%
   filter(year(release_date) > 2000 ) %>%
   ggplot(aes(x=genre, y=to_date, fill=genre)) + 
@@ -816,11 +816,11 @@ Notare come di F2P negli anni non ne siano usciti moltissimi eppure, assieme agl
 Ora sarebbe da capire quanti dei F2P sono action e quanti degli indie sono action, o comunque che tipo di correlazioni ci sono tra i generi.
 
 " questo e' circa text mining sulle stringhe che definiscono i generi"
-```{r}
+**TODO** rimuovere discorso dell'ordine
+```{r echo=F}
 games_bigr_counts =
-games_info %>%
-#games_info[1:10, ] %>%
-  select(game.title, genre) %>%
+  games_info %>%
+  select(genre) %>%
   mutate(genre=gsub(" ", "", genre)) %>%
   mutate(genre=gsub(",", " ", genre)) %>%
   mutate(genre=paste("init", genre, "end", sep = " ")) %>%
@@ -829,42 +829,173 @@ games_info %>%
   count(word1, word2, sort = TRUE) %>%
   filter(
     word1 != "init" & word1 != "end" &
-    word2 != "init" & word2 != "end" )
+    word2 != "init" & word2 != "end"
+  )
+```
 
+
+```{r echo=F}
 # create the graph
 bigram_graph <- games_bigr_counts %>%
   filter(n > 10) %>%
   as_tbl_graph()
 
-#bigram_graph
-
-# arrows
 a <- grid::arrow(type = "closed", length = unit(.1, "inches"))
-```
-
-```{r}
 ggraph(bigram_graph, layout = "fr") +
-  #geom_edge_arc(aes(edge_alpha=n), show.legend = F) +
-  geom_edge_arc2(aes(edge_alpha=n), color="steelblue", show.legend = F) +
-  
-  #geom_node_point(color = "lightblue", size = 1) +
-  #geom_node_label(aes(label = name)) +
-  
-  #geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
-  geom_node_text(aes(label = name)) +
-  
+  geom_edge_arc2(aes(edge_alpha=n), color="steelblue", show.legend = F, arrow = a, end_cap=circle(0.06, "inches")) +
+  geom_node_point(color="steelblue") +
+  geom_node_text(aes(label = name), vjust=1, hjust=1) +
   theme_void() #+
-#ggtitle(paste0('Layout: ', l)) +  
-#theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
+  #ggtitle(paste0('Layout: ', l)) +  
+  #theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
+## TODO add title/labels?
+## TODO generate until really beautiful
+
+```
+Assumendo che l'ordine dei tag dei generi indichi la maggior appartenenza ("Indie, Action" indica che e' piu' indie che action)
+Notiamo che indie e' correlato in modo molto forte ad action, quindi questo spiega il fatto che siano entrambi molto diffusi.
+Mente f2p e' sganciato da indie, giochi che di solito costano poco perche' costa poco farli e quindi non vengono messi a gratis
+Proprio marketing differenti
+**TODO** aggiustare commento in realzione all'ordinamento dei generi
+
+```{r echo=F}
+genre_freq =
+  games_info %>%
+  filter(!is.na(release_date)) %>%
+  select(game.title, genre, release_date) %>%
+  mutate(
+    genres =
+      lapply( genre,
+              function(x) {
+                data.frame(
+                  genres = unlist(str_split(x, pattern=","))
+                )
+              }
+      )
+  ) %>%
+  unnest(genres) %>%
+  select(genre=genres) %>%
+  group_by(genre) %>%
+  count(sort = T) %>%
+  mutate(genre=gsub(" ", "", genre))
+
+genres_freq_sum =
+  #genre_freq[1:5,] %>% mutate(fake=1) %>%
+  genre_freq %>% mutate(fake=1) %>%
+  full_join(
+    #genre_freq[1:5,] %>% mutate(fake=1),
+    genre_freq %>% mutate(fake=1),
+    by = "fake") %>%
+  filter(genre.x != genre.y) %>%
+  select(-fake) %>%
+  mutate(
+    genre.sum = paste(genre.x, genre.y, sep=""),
+    n.sum = n.x+n.y
+  ) %>%
+  select(genre=genre.sum, genre_freq=n.sum) %>%
+  mutate(genre=tolower(genre))
 ```
 
 
+```{r echo=F}
+## Corrected count
+games_bigr_counts =
+  data.frame(
+    genre = 
+      unlist(
+        lapply(
+          unlist(
+            lapply(
+              games_info %>%
+                select(genre) %>%
+                mutate(genre=gsub(" ", "", genre)) %>%
+                mutate(genre=gsub(",", " ", genre)) %>%
+                pull(genre),
+              function (x){
+                combinat::permn(
+                  unlist(str_split(x, pattern=" "))
+                )
+              }
+            ),
+            recursive = F
+          ),
+          function (x){
+            paste(x, collapse = " ")
+          }
+        ))
+  ) %>%
+  mutate(genre=paste("init", genre, "end", sep = " ")) %>%
+  unnest_tokens(bigram, genre, token = "ngrams", n = 2) %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  count(word1, word2, sort = TRUE) %>%
+  filter(
+    word1 != "init" & word1 != "end" &
+    word2 != "init" & word2 != "end"
+  )  %>%
+  mutate(genre=paste(word1, word2, sep="")) %>%
+  left_join(genres_freq_sum, by="genre") %>%
+  mutate(ndivfreq = n/genre_freq)
+  
 
 
+```
 
 
+Se rilassiamo l'assunzione riguardo all'ordine dei generi possiamo notare che si formano due cluster
+
+```{r echo=F}
+games_bigr_counts %>%
+  filter(word1 > word2) %>%
+  #filter(n > 8000) %>%
+  as_tbl_graph() %>%
+  ggraph(layout = "fr") +
+  #ggraph(layout = "star") +
+  #ggraph(layout = "kk") +
+  #ggraph(layout = "circle") +
+  
+  #geom_edge_arc(aes(edge_alpha=n), color="steelblue", show.legend = F) +
+  geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
+  
+  geom_node_text(aes(label = name)) +
+  theme_void() #+
+
+  #ggtitle(paste0('Layout: ', l)) +  
+  #theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
+## TODO add title/labels?
+## TODO generate until really beautiful
+```
+Il primo e' foramto da software di utility mentre il secondo da i veri e propri giochi.
+Zoomando sul cluster relativo ai giochi
 
 
+```{r echo=F}
+# TODO fix with ndivfreq
+games_bigr_counts %>%
+  filter(word1 > word2) %>%
+  #filter(n > 700) %>%
+  #filter(n > 1700) %>%
+  #filter(n > 7000) %>%
+  filter(n > 7500) %>%
+  #filter(n > 8000) %>%
+  #filter(n > 9000) %>%
+  as_tbl_graph() %>%
+  ggraph(layout = "fr") +
+  #ggraph(layout = "star") +
+  #ggraph(layout = "kk") +
+  #ggraph(layout = "circle") +
+  
+  geom_edge_arc(aes(edge_alpha=n), color="steelblue", show.legend = F) +
+  
+  geom_node_text(aes(label = name)) +
+  theme_void() #+
+
+  #ggtitle(paste0('Layout: ', l)) +  
+  #theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
+## TODO add title/labels?
+## TODO generate until really beautiful
+```
+Si vede come i generi piu' frequenti dei giochi indie sono rpg action e adventure
+pochissimi giochi indie sono anche freetoplay
 
 
 
