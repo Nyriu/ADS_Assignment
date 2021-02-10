@@ -691,7 +691,10 @@ genres_playtime = genres_playtime %>%
   mutate (
     angle = ifelse(angle < -90, angle+180, angle)
   )
+```
 
+
+```{r echo=F, warning=F, include=F}
 genres_playtime %>%
   ggplot(aes(x=reorder(genre, playtime_abs), y=playtime_abs)) +
   geom_bar(stat="identity", fill=alpha("steelblue", 0.5)) +
@@ -734,7 +737,66 @@ genres_playtime %>%
 
 # TODO add title/legend?
 
-# TODO IMPORTANT URGENT
+```
+
+```{r echo=F, warning=F}
+## Animating example above
+d1 = genres_playtime %>%
+  mutate(
+    label="",
+    #labely=0,
+    labely=playtime_abs + 100000,
+    #labely=2500000,
+    #labely=3000000,
+    #hjust=0,
+    playtime_rel=0,
+    phase=1
+  )
+
+d2 = genres_playtime %>%
+  mutate(
+    label=genre,
+    labely=playtime_abs + 100000,
+    phase=2
+  )
+
+d = rbind(d1,d2)
+
+d %>%
+  ggplot(aes(x=reorder(genre, playtime_abs), y=playtime_abs)) +
+  geom_bar(stat="identity", fill=alpha("steelblue", 0.5)) +
+  geom_bar(aes(y=-playtime_rel*50), stat="identity", fill=alpha("red", 0.5)) +
+  ylim(-1050000,2000000) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank()#,
+    #plot.margin = unit(c(-0.5,-3,-3,-2), "cm") # up, right, bottom, left
+  ) +
+  coord_polar(start = 0) +
+  geom_text( # TODO transition
+    aes(y=labely, label=label, hjust=hjust),
+    color="black", fontface="bold",alpha=0.6, size=2.5, angle= d$angle #, inherit.aes = FALSE
+    ) +
+  transition_states(
+    phase,
+    transition_length = 2,
+    state_length = 2
+  ) +
+  #enter_fade(alpha=0.5) +
+  #exit_fade(alpha=0.2) +
+  #ease_aes('sine-in-out') +
+  ease_aes('quadratic-in-out') #+
+  #ease_aes('quadratic-in') #+
+  #ggtitle('Now showing {closest_state}',
+  #        subtitle = 'Frame {frame} of {nframes}')
+
+# TODO add transition adding labels then redbars
+# with smooth transition
+
+# TODO add title/legend?
+
 ```
 
 Notare come i Free2Play sono molto presenti e sono anche molto giocati! significa che la gente gioca a quelli un po' a caso tanto per
@@ -834,7 +896,7 @@ games_bigr_counts =
 ```
 
 
-```{r echo=F}
+```{r echo=F, include=F}
 # create the graph
 bigram_graph <- games_bigr_counts %>%
   filter(n > 10) %>%
@@ -1039,6 +1101,7 @@ p = games_bigr_counts %>%
 
 
 ```{r include=F}
+## TENTATIVO di animazione
 ## Raccolgo i dati dei 3 plot
 
 d1 = games_bigr_counts %>%
@@ -1115,6 +1178,8 @@ g123 %>%
   ggtitle('Now showing {closest_state}',
           subtitle = 'Frame {frame} of {nframes}')
   
+
+## TENTATIVO FALLITO
 ```
 
 
@@ -1139,7 +1204,7 @@ g123 %>%
 ## About user-games interactions
 
 
-```{r}
+```{r echo=F}
 isnumeric = function(y){
  is.numeric(
    tryCatch(
@@ -1158,42 +1223,91 @@ isnumeric_list = function(y) {
     )
   )
 }
-
-isnumeric_list(c("123", "432", "lol"))
 ```
 
 
-```{r}
-
-users_info[1:20, ] %>%
+```{r echo=F}
+g =
+#users_info[1:20, ] %>%
+  users_info %>%
   filter(behavior.name == "play") %>%
   select(user.id, game.title, hours=value) %>%
-
+  #group_by(user.id, game.title) %>%
+  #slice_head(n=100) %>%
+  #ungroup() %>%
   as_tbl_graph() %>%
   activate(nodes) %>%
-  mutate(nodetype=ifelse(isnumeric_list(name), "user", "game"))# %>%
+  mutate(nodetype=ifelse(isnumeric_list(name), "user", "game")) %>%
+  mutate(centrality = centrality_eigen()) %>%
+  mutate(out_deg = centrality_degree(mode="out")) %>%
+  mutate(in_deg = centrality_degree(mode="in"))
 
-## TODO
-## QUA ESPLODE R
-  #ggraph(layout = "fr") +
+g %>%
+  ggraph(layout = "fr") +
   #ggraph(layout = "linear", circular=T) +
-  ggraph(layout = "partition") +
-  #geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
-  geom_edge_link(color="steelblue", show.legend = F) +
-  geom_node_poit(aes(label = name)) +
+  #ggraph(layout = "partition") +
+  geom_edge_arc(aes(edge_alpha=log(hours)), color="steelblue", show.legend = F) +
+  #geom_edge_link(color="steelblue", show.legend = F) +
+  geom_node_point(aes(color = nodetype)) +
+  #geom_node_point(aes(filter = is_user), color="red") +
+  #geom_node_point(aes(filter = is_game), color="blue") +
   #geom_node_text(aes(label = name)) +
   #geom_node_text(aes(label = type)) +
   theme_void()
 
-is.numeric(
-  tryCatch(
-    as.numeric("123asasdf"),
-    warning=function(x) "nope",
-    error=function(x) "nope"
-    )
-  )
-
+g %>%
+  filter(
+    (nodetype == "user" & out_deg > 1) |
+    (nodetype == "game" & in_deg > 300)
+  ) %>%
+  #ggraph(layout = "fr") +
+  ggraph(layout = "kk") +
+  #ggraph(layout = "linear") +
+  #ggraph(layout = "star") +
+  #ggraph(layout = "linear", circular=T) +
+  #geom_edge_arc(color="steelblue", show.legend = F) +
+  #geom_edge_arc(aes(edge_alpha=hours), color="steelblue", show.legend = F) +
+  #geom_edge_arc(aes(edge_alpha=log(hours)), color="steelblue", show.legend = F) +
+  geom_edge_link(aes(edge_alpha=log(hours)), color="steelblue", show.legend = F) +
+  geom_node_point(aes(size=centrality, alpha=centrality, color = nodetype)) #+
+  #theme_void()
 ```
+
+
+```{r echo=F}
+g %>%
+  filter(
+    (nodetype == "user" & out_deg > 1) |
+    #(nodetype == "user" & out_deg > 50) |
+    (nodetype == "game" & in_deg > 300)
+  ) %>%
+  #ggraph(layout = "fr") +
+  ggraph(layout = "kk") +
+  #ggraph(layout = "linear") +
+  #ggraph(layout = "star") +
+  #ggraph(layout = "linear", circular=T) +
+  #geom_edge_arc(color="steelblue", show.legend = F) +
+  #geom_edge_arc(aes(edge_alpha=hours), color="steelblue", show.legend = F) +
+  #geom_edge_arc(aes(edge_alpha=log(hours)), color="steelblue", show.legend = F) +
+  geom_edge_link(aes(edge_alpha=log(hours)), color="steelblue", show.legend = F) +
+  geom_node_point(aes(size=centrality, alpha=centrality, color = nodetype)) +
+  geom_node_text(aes(label=name, filter = (centrality > 0.30),
+                     vjust=1, hjust=1
+                     )) #+
+## TODO end label stuff
+  
+  #geom_label_repel(
+  #  aes(x=x, y=y, label=name),
+  #  box.padding   = 0.35, 
+  #  point.padding = 0.35,
+  #  segment.color = 'grey50'
+  #  ) #+
+  #geom_text(aes(x = x, y=y, label=name), nudge_x = 0.3, nudge_y = 0.3)
+  
+  #atheme_void()
+```
+**TODO** add comment
+add numerical summaries for centrality
 
 
 
