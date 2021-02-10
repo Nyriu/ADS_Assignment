@@ -27,6 +27,12 @@ library(gganimate)
 library(plotly)
 library("RColorBrewer")
 
+#library(tidytext)
+#library(igraph)
+#library(tidygraph)
+#library(ggraph)
+
+
 library(formattable)
 ## TODO add pretty images lib
 ```
@@ -737,7 +743,7 @@ Notare come i Free2Play sono molto presenti e sono anche molto giocati! signific
 
 
 Come è variata la presenza dei generi negli anni? (bel grafico animato)
-```{r include=F}
+```{r echo=F}
 genre_pop =
   games_info %>%
   filter(!is.na(release_date)) %>%
@@ -759,8 +765,10 @@ genre_pop =
   arrange(genre, release_date) %>%
   group_by(genre) %>%
   mutate(to_date=cumsum(value)) %>%
-  filter(genre != "") %>%
+  filter(genre != "")
 
+genre_pop =
+  genre_pop %>%
   # top 9
   filter(
     genre %in%
@@ -784,7 +792,8 @@ genre_pop %>%
   #geom_point() +
   facet_wrap(~genre) #+ #theme_minimal()
 ```
-```{r echo=F}
+
+```{r echo=F include=F}
 
 genre_pop %>%
 #genre_pop[1:2000,] %>%
@@ -802,6 +811,67 @@ genre_pop %>%
   ggtitle('Now showing {closest_state}',
           subtitle = 'Frame {frame} of {nframes}')
 ```
+
+Notare come di F2P negli anni non ne siano usciti moltissimi eppure, assieme agli action, sono quelli giocati di piu'.
+Ora sarebbe da capire quanti dei F2P sono action e quanti degli indie sono action, o comunque che tipo di correlazioni ci sono tra i generi.
+
+" questo e' circa text mining sulle stringhe che definiscono i generi"
+```{r}
+games_bigr_counts =
+games_info %>%
+#games_info[1:10, ] %>%
+  select(game.title, genre) %>%
+  mutate(genre=gsub(" ", "", genre)) %>%
+  mutate(genre=gsub(",", " ", genre)) %>%
+  mutate(genre=paste("init", genre, "end", sep = " ")) %>%
+  unnest_tokens(bigram, genre, token = "ngrams", n = 2) %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  count(word1, word2, sort = TRUE) %>%
+  filter(
+    word1 != "init" & word1 != "end" &
+    word2 != "init" & word2 != "end" )
+
+# create the graph
+bigram_graph <- games_bigr_counts %>%
+  filter(n > 10) %>%
+  as_tbl_graph()
+
+#bigram_graph
+
+# arrows
+a <- grid::arrow(type = "closed", length = unit(.1, "inches"))
+```
+
+```{r}
+ggraph(bigram_graph, layout = "fr") +
+  #geom_edge_arc(aes(edge_alpha=n), show.legend = F) +
+  geom_edge_arc2(aes(edge_alpha=n), color="steelblue", show.legend = F) +
+  
+  #geom_node_point(color = "lightblue", size = 1) +
+  #geom_node_label(aes(label = name)) +
+  
+  #geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+  geom_node_text(aes(label = name)) +
+  
+  theme_void() #+
+#ggtitle(paste0('Layout: ', l)) +  
+#theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
