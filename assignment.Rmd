@@ -1139,6 +1139,64 @@ g123 %>%
 ## About user-games interactions
 
 
+```{r}
+isnumeric = function(y){
+ is.numeric(
+   tryCatch(
+   as.integer(y),
+    warning=function(x) "nope",
+    error=function(x) "nope"
+    )
+  )
+}
+
+isnumeric_list = function(y) {
+  unlist(
+    lapply(
+      y,
+      isnumeric
+    )
+  )
+}
+
+isnumeric_list(c("123", "432", "lol"))
+```
+
+
+```{r}
+
+users_info[1:20, ] %>%
+  filter(behavior.name == "play") %>%
+  select(user.id, game.title, hours=value) %>%
+
+  as_tbl_graph() %>%
+  activate(nodes) %>%
+  mutate(nodetype=ifelse(isnumeric_list(name), "user", "game"))# %>%
+
+## TODO
+## QUA ESPLODE R
+  #ggraph(layout = "fr") +
+  #ggraph(layout = "linear", circular=T) +
+  ggraph(layout = "partition") +
+  #geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
+  geom_edge_link(color="steelblue", show.legend = F) +
+  geom_node_poit(aes(label = name)) +
+  #geom_node_text(aes(label = name)) +
+  #geom_node_text(aes(label = type)) +
+  theme_void()
+
+is.numeric(
+  tryCatch(
+    as.numeric("123asasdf"),
+    warning=function(x) "nope",
+    error=function(x) "nope"
+    )
+  )
+
+```
+
+
+
 <!--
 ### rete in cui grossezza link e' ore giocate
 ### analisi dei giochi "centrali"
