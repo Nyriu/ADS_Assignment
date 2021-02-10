@@ -941,12 +941,11 @@ games_bigr_counts =
 ```
 
 
-Se rilassiamo l'assunzione riguardo all'ordine dei generi possiamo notare che si formano due cluster
 
 ```{r echo=F}
 games_bigr_counts %>%
   filter(word1 > word2) %>%
-  #filter(n > 8000) %>%
+  #filter(ndivfreq > 1) %>%
   as_tbl_graph() %>%
   ggraph(layout = "fr") +
   #ggraph(layout = "star") +
@@ -964,27 +963,39 @@ games_bigr_counts %>%
 ## TODO add title/labels?
 ## TODO generate until really beautiful
 ```
+Qui ogni arco rappresenta la frequenza con cui la coppia compare nel genere di un gioco diviso la somma delle frequenze dei generi.
+Se rilassiamo l'assunzione riguardo all'ordine dei generi possiamo notare che si formano due cluster
 Il primo e' foramto da software di utility mentre il secondo da i veri e propri giochi.
 Zoomando sul cluster relativo ai giochi
 
 
 ```{r echo=F}
-# TODO fix with ndivfreq
-games_bigr_counts %>%
+interesting_genres = c(
+  "indie",
+  "action", "freetoplay",
+  "massivelymultiplayer",
+  "adventure",
+  "casual",
+  "rpg",
+  "strategy"
+)
+
+
+#for (lvl in c(0,3,5,7,10,12)) {
+  
+lvl=5
+p = games_bigr_counts %>%
+  filter(
+    word1 %in% interesting_genres |
+      word2 %in% interesting_genres
+    ) %>%
   filter(word1 > word2) %>%
-  #filter(n > 700) %>%
-  #filter(n > 1700) %>%
-  #filter(n > 7000) %>%
-  filter(n > 7500) %>%
-  #filter(n > 8000) %>%
-  #filter(n > 9000) %>%
+  filter(ndivfreq > lvl) %>%
   as_tbl_graph() %>%
   ggraph(layout = "fr") +
-  #ggraph(layout = "star") +
-  #ggraph(layout = "kk") +
-  #ggraph(layout = "circle") +
   
-  geom_edge_arc(aes(edge_alpha=n), color="steelblue", show.legend = F) +
+  #geom_edge_arc(aes(edge_alpha=n), color="steelblue", show.legend = F) +
+  geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
   
   geom_node_text(aes(label = name)) +
   theme_void() #+
@@ -993,11 +1004,48 @@ games_bigr_counts %>%
   #theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
 ## TODO add title/labels?
 ## TODO generate until really beautiful
+  plot(p)
+#}
 ```
-Si vede come i generi piu' frequenti dei giochi indie sono rpg action e adventure
-pochissimi giochi indie sono anche freetoplay
+
+**TODO** commento
+vediamo che il legame tra ftp e mmo e' molto forte
+zoomando ancora
+
+```{r echo=F}
+interesting_genres = c(
+  "indie"
+)
 
 
+#for (lvl in c(0,3,5,7,10,12)) {
+  
+lvl=0
+p = games_bigr_counts %>%
+  filter(
+    word1 %in% interesting_genres |
+      word2 %in% interesting_genres
+    ) %>%
+  filter(word1 > word2) %>%
+  filter(ndivfreq > lvl) %>%
+  as_tbl_graph() %>%
+  ggraph(layout = "star") +
+  
+  #geom_edge_arc(aes(edge_alpha=n), color="steelblue", show.legend = F) +
+  geom_edge_arc(aes(
+    edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
+  
+  geom_node_text(aes(label = name)) +
+  #geom_node_label(aes(label = name)) +
+  theme_void() #+
+
+  #ggtitle(paste0('Layout: ', l)) +  
+  #theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
+## TODO add title/labels?
+## TODO generate until really beautiful
+  plot(p)
+#}
+```
 
 
 
