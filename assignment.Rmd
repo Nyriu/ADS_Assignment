@@ -458,7 +458,7 @@ The plot animation cycles between the scale of the data and a logarithmic scale,
 
 # What about the highlited gamers
 
-Inspecting more about the highlighted users, that are the four most extreme, gives us the following plot.
+Inspecting more about the highlighted users, that are the four most extreme users, gives us the following plot.
 ```{r include=F}
 ## Creare dati per pie di tempo e soldi
 pie_data =
@@ -553,7 +553,7 @@ for (user in (to_plot %>% distinct(user.id) %>% pull())) {
             values = ~hours,
             name = user,
             domain = list(row=dispositions[[i]], column=dispositions[[i+1]]),
-            title = list(title="hola"),
+            #title = list(title="test"),
             textinfo='percent',
             hoverinfo='label'
     )
@@ -564,9 +564,8 @@ for (user in (to_plot %>% distinct(user.id) %>% pull())) {
 x1 = 0.02
 x2 = 0.53
 y1 = 0.16
-y2 = 0.80
+y2 = 0.75
 
-# TOOD better labels
 fig = fig %>%
   layout(#title = "Pie Charts with Subplots",
     showlegend = F,
@@ -611,55 +610,67 @@ fig = fig %>%
 fig
 ```
 
-TODO Commentare il grafico
- 
- riguardo al tempo
-* divertente che i due con il maggior numero di ore le hanno fatte solo su un gioco
-* i due con molti giochi hanno giocato spalmando le ore
+It's funny to see that the players with the higher number of hours spent all the time with one game.
+Note also that both the games are free to play.
+```{r include=F }
+
+# calcolo ore medie per gioco per giocatore "extreme"
+
+pie_data %>%
+  group_by(user.id) %>%
+  mutate(
+    hours_mean     = mean(hours),
+    hours_median = median(hours),
+    price_mean     = mean(price),
+    price_median = median(price)
+  ) %>%
+  distinct(user.id, hours_mean,
+           hours_median, price_mean,
+           price_median )
+pie_data %>%
+  group_by(user.id) %>%
+  count()
+
+1066 / (212 - 5)
+
+```
+The users in the first row had respectively spent a mean of 13 and 11 dollars on each game, playing them with and average of 10 and 7 hours per game.
+The second user (upper right) bought 212 games, and, excluding the five shown, spent an average of 5.1 hours per game.
+Note that very few games can be completed in such a few hours.
+
+Follows an interactive plot to better explore the users' preferences.
 
 ```{r echo=F}
-p =
-  pie_data %>%
-  select(user.id, game.title, price, hours) %>%
-  #ggplot(aes(x=hours, y=price, size=hours)) +
-  ggplot(aes(x=hours, y=price, text=game.title)) +
-  geom_point(aes(alpha=0.2)) +
-  geom_rug() +
-  facet_wrap(~user.id, scale="free_x")
-#p
-
 # TODO title and labels
-gp = ggplotly(p, tooltip = c("text")) #%>%
+p = pie_data %>%
+  select(user.id, game.title, price, hours) %>%
+  ggplot(aes(x=price, y=hours, text=game.title)) +
+  geom_point(aes(alpha=0.2)) +
+  #geom_rug() +
+  facet_wrap(~user.id, scale="free_y") +
+  theme_minimal() +
+  xlab("Price") +
+  ylab("Hours")
+
+ggplotly(p, tooltip = c("text")) #%>%
   #config(displayModeBar = FALSE) %>%
   #layout(yaxis = list(fixedrange = TRUE),
   #       xaxis = list(fixedrange = TRUE))
 
-#gp$x$attrs[['27083d1c5a80']]
-#gp$x$attrs[['2708284a5c83']]
-#gp$x$layoutAttrs[['2708284a5c83']] = gp$x$layoutAttrs[['27083d1c5a80']]
-#
-#gp$x$layoutAttrs[['27083d1c5a80']]
-#gp$x$layoutAttrs[['2708284a5c83']]
-
-
-gp
-
 ```
-**TODO** commento sul grafico sopra
-
-* sembra non esser vero che più spendi più giochi
 
 
-
-### TODO other on players?
-**TODO**?
-
-
+<!-- ### TODO other on players? -->
+<!-- **TODO**? -->
 
 
 
 
 ## About the games
+
+Newer games have more playtime than older games?
+
+**TODO** aggiungere domande
 
 Giochi usciti recentemente vengono giocati di più?
 
@@ -696,51 +707,59 @@ to_plot
 
 
 ```{r echo=F}
-# TODO fix font stuff
-#extrafont::loadfonts(device="win")
-#extrafont::font_import("C:/Windows/Fonts/", pattern = "RobotoCondensed")
-#library(ggplot2)
-
 p = to_plot %>%
   ggplot(aes(x=release_date, y=log(playtime + 0.0001),
-             label=game.title, text=game.title#,
-             #color=log(purchases), alpha=log(purchases))) +
-             #alpha=log(purchases))) +
-             )) +
+             label=game.title, text=game.title
+  )) +
   geom_point( aes(alpha=log(purchases)), color="slateblue") +
   theme_minimal() +
-  #theme( title = "lolloni", legend.position="bottom") +
-  theme(
-    #title = element_text("TODO TITOLONE"), # TODO fix fonts
-    #legend.title = element_text("log(num) Purchases"), # TODO fix fonts
-    legend.position="bottom") +
+  theme( legend.position="bottom") +
   xlab("Release Date") +
   ylab("Playtime in log(hours)") +
+  scale_y_continuous(labels = 
+                       c(
+                         "log(~0) = -10",
+                         "log(~0) =  -5",
+                         "log(1) =   0",
+                         "log(150) =   5",
+                         "log(22000) =  10",
+                         "log()  =  15"
+                       )
+                     
+  ) +
+  scale_alpha_continuous( labels = c(
+    "log(1)=0",
+    "log(10)=2",
+    "log(50)=4",
+    "log(500)=6",
+    "log(3000)=8"
+  )) +
+  labs( alpha="log(# of Purchases)") +
   geom_label_repel(
     data=to_plot %>% slice_max(purchases, n=2),
     box.padding   = 0.35, 
     point.padding = 0.25,
     segment.color = 'grey50'
-    ) +
+  ) +
   geom_label_repel(
     data=to_plot %>% slice_max(release_date, n=1),
     box.padding   = 0.25, 
     point.padding = 0.75,
     segment.color = 'grey50'
-    ) +
+  ) +
   geom_label_repel(
     data=to_plot %>% slice_min(release_date, n=2),
     box.padding   = 0.45, 
     point.padding = 0.25,
     segment.color = 'grey50'
-    )
+  )
+
 gm = ggMarginal(p, type="histogram", color="white", fill="slateblue")
 gm
 ```
 
 
 TODO commentare
-
 
 Il tempo di gioco rispetto ai generi fa notare qualche cosa? il genere più popolare (persone che gli hanno dato una possibilità/comprato) è anche quello più giocato (comprato ed effettivamente apprezzato molto)?
 ```{r include=F}
@@ -1478,9 +1497,14 @@ add numerical summaries for centrality
 ### analisi dei giochi "centrali"
 
 ### poi collego anche i tag analisi dei tag "centrali"
+-->
 
+
+## TODO accennare ai recsys!
+<!--
 
 ### possibile recsys
+
 ```{r}
 ## TODO is good idea?
 # Rearrange user_info: rows = users, columns=games
