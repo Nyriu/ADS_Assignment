@@ -1,5 +1,6 @@
 ---
-title: "Assignment"
+#title: "Assignment"
+title: "Steam Users and Games"
 author: "Tristano Munini"
 date: "15/02/2021"
 output: html_document
@@ -10,8 +11,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r warning=FALSE, error=FALSE, echo=F, show=F, include=F}
-# TODO check which are needed
-#library(rrecsys)
 library(readr)
 library(stringr)
 library(tidyr)
@@ -30,14 +29,9 @@ library(igraph)
 library(tidygraph)
 library(ggraph)
 
-
 library(formattable)
 
-#library(extrafont)
-#font_import(promt=FALSE)
-#loadfonts(device = "win")
-
-## TODO add pretty images lib
+#library(rrecsys)
 ```
 
 ```{r echo=F, eval=F, include=F}
@@ -123,11 +117,9 @@ p = df %>%
 
 animate(p, fps=30)
 ```
-!(dragonfly.gif)
-
-## Introduction
-
-TODO
+<center>
+![](dragonfly.gif)
+</center>
 
 ## Datasets
 
@@ -203,6 +195,7 @@ formattable(head(raw_data_2 %>% select(name, release_date, genre, developer)))
 
 ### Analyzed
 
+TODO dire meglio
 Because I was interested in following the connections between gamers and type of games played I've created two sub datasets:
 <!-- TODO add link to github? -->
 *users_info.csv* is a subset of the first one, while *games_info.csv* is a subset of the second.
@@ -922,21 +915,8 @@ ggplot() +
   theme_void() + 
   theme(legend.position="none") +
   coord_equal()
-
-print(
-  paste(nrow(to_plot), "generi differenti") # TODO Add as title
-)
-
-to_plot %>%
-  arrange(desc(n))
-
-# TODO capire se si reisce a dinamicizzare con hover decente
-#gp = ggplotly(p, tooltip = c("label")) %>%
-#  config(displayModeBar = FALSE) %>%
-#  layout(yaxis = list(fixedrange = TRUE),
-#         xaxis = list(fixedrange = TRUE))
-#gp
 ```
+
 In the plot above the area of the circles is proportional to the number of games that belong to the genre.
 The most frequent is Indie with 1223 titles followed by Action (900), Adventure (582) and Strategy (496).
 Note that FreeToPlay occupy the 8-th position.
@@ -946,6 +926,7 @@ The income of an indie game comes from the number of units sold, the income of a
 So a FreeToPlay adopts a strategy that's almost opposite to the one adopted by and inde game.
 
 Also the number of Indie games is extremely increased in the last years because of the accessibility of powerful tools and because of the possibility of reaching a huge audience of customers.
+
 ```{r echo=F}
 genre_pop =
   games_info %>%
@@ -993,7 +974,7 @@ Note the huge difference between the presence of Indie games and FreeToPlay (F2P
 Once a F2P game has been released, the developers stick to the game to add new content, sometimes even monthly.
 On the other hand for a small Indie company it's better to release frequently smaller games.
 
-To confirm this different business strategy we should look at the playtime for every genre and note that the Indie genre collected less hours than the F2P genre, the plot below aims at that.
+To confirm this different business strategy we should look at the playtime for every genre and note that the Indie genre collected less hours than the F2P genre, the plot below aims at doing that.
 
 
 ```{r echo=F, include=F, eval=F}
@@ -1171,18 +1152,19 @@ d %>%
 
 ```
 
-**TODO**
-The blue columns
-Notare come i Free2Play sono molto presenti e sono anche molto giocati! significa che la gente gioca a quelli un po' a caso tanto per
+The blue columns show the total playtime of each genre, while the red bars show the users' "fidelity" to a game.
+The fidelity is measured as the total playtime divided by the number of users.
+Note that even if Indie is the most popular game its total playtime is far less from the one of Action or F2P.
+Also note the "fidelity" of the users of Indie games: in proportion to the total playtime is one of the lowest.
+Instead the "fidelity" of the F2P games is really high.
 
 
 
 
-Ora sarebbe da capire quanti dei F2P sono action e quanti degli indie sono action, o comunque che tipo di correlazioni ci sono tra i generi.
 
+Until now we have not analyzed the probability of a game to belong to different genres.
+In the graph below this probability is visualized with the edge presence and its strength.
 
-" questo e' circa text mining sulle stringhe che definiscono i generi"
-**TODO** rimuovere discorso dell'ordine
 ```{r echo=F}
 games_bigr_counts =
   games_info %>%
@@ -1218,11 +1200,6 @@ ggraph(bigram_graph, layout = "fr") +
 ## TODO generate until really beautiful
 
 ```
-Assumendo che l'ordine dei tag dei generi indichi la maggior appartenenza ("Indie, Action" indica che e' piu' indie che action)
-Notiamo che indie e' correlato in modo molto forte ad action, quindi questo spiega il fatto che siano entrambi molto diffusi.
-Mente f2p e' sganciato da indie, giochi che di solito costano poco perche' costa poco farli e quindi non vengono messi a gratis
-Proprio marketing differenti
-**TODO** aggiustare commento in realzione all'ordinamento dei generi
 
 ```{r echo=F}
 genre_freq =
@@ -1262,7 +1239,6 @@ genres_freq_sum =
   mutate(genre=tolower(genre))
 ```
 
-
 ```{r echo=F}
 ## Corrected count
 games_bigr_counts =
@@ -1301,14 +1277,12 @@ games_bigr_counts =
   mutate(genre=paste(word1, word2, sep="")) %>%
   left_join(genres_freq_sum, by="genre") %>%
   mutate(ndivfreq = n/genre_freq)
-  
-
-
 ```
 
 
 
-```{r echo=F}
+
+```{r echo=F, include=F}
 games_bigr_counts %>%
   filter(word1 > word2) %>%
   #filter(ndivfreq > 1) %>%
@@ -1329,13 +1303,18 @@ games_bigr_counts %>%
 ## TODO add title/labels?
 ## TODO generate until really beautiful
 ```
-Qui ogni arco rappresenta la frequenza con cui la coppia compare nel genere di un gioco diviso la somma delle frequenze dei generi.
-Se rilassiamo l'assunzione riguardo all'ordine dei generi possiamo notare che si formano due cluster
-Il primo e' foramto da software di utility mentre il secondo da i veri e propri giochi.
-Zoomando sul cluster relativo ai giochi
 
+<center>
+![](graph_00.png)
+</center>
 
-```{r echo=F}
+The first thing to note is the division in two different clusters.
+Interestingly one cluster is stronger because it is composed by utility software with a really specific purpose.
+This software have nothing in common with the games of the other cluster.
+
+The next plot zooms into the game cluster.
+
+```{r echo=F, eval=F, include=F}
 interesting_genres = c(
   "indie",
   "action", "freetoplay",
@@ -1374,11 +1353,17 @@ p = games_bigr_counts %>%
 #}
 ```
 
-**TODO** commento
-vediamo che il legame tra ftp e mmo e' molto forte
-zoomando ancora
+<center>
+![](graph_01.png)
+</center>
 
-```{r echo=F}
+The first thing to note is that F2P and Massively Multiplayer (Online) (MMO) are strongly related, thus confirming the business strategy hinted before: create a big community that keeps playing over the years.
+Note also that Indie is loosely connected with F2P and almost not connected at all with MMO.
+
+
+
+
+```{r echo=F, include=F}
 p = games_bigr_counts %>%
   filter(
     word1 == "indie" | word2 == "indie"
@@ -1400,7 +1385,12 @@ p = games_bigr_counts %>%
   plot(p)
 #}
 ```
-**TODO** Commentare grafico
+<!--
+<center>
+![](graph_02.png)
+
+</center>
+-->
 
 
 
@@ -1499,6 +1489,7 @@ g123 %>%
 
 
 <!--
+TODO
 ## text "mining" per capire quando e' porbabile che un gioco indie sia action/f2p
 
 
@@ -1506,6 +1497,7 @@ g123 %>%
 -->
 
 ## About user-games interactions
+Looking at games and users as nodes of a bipartite graph connected by the hours of play, I was able to produce the graph below.
 
 
 ```{r echo=F}
@@ -1581,7 +1573,7 @@ g %>%
 ```
 
 
-```{r gomitolo, echo=F}
+```{r gomitolo, echo=F, eval=F, include=F}
 out_deg_filt = 10
 #out_deg_filt = 100
 p = g %>%
@@ -1596,7 +1588,11 @@ p = g %>%
 
 plot(p)
 ```
-```{r gomitolo_label,eval=F, echo=F}
+<center>
+![](gomitolo.png)
+</center>
+
+```{r gomitolo_label,eval=F, echo=F, include=F}
 p +
   geom_node_text(aes(label=name, filter = (centrality > 0.30),
                      vjust=1, hjust=1))
@@ -1609,12 +1605,13 @@ p +
   #  ) #+
   #geom_text(aes(x = x, y=y, label=name), nudge_x = 0.3, nudge_y = 0.3)
 ```
+
 **TODO** add comment
+<!--
 add numerical summaries for centrality
 
 
 
-<!--
 ### rete in cui grossezza link e' ore giocate
 ### analisi dei giochi "centrali"
 
@@ -1622,21 +1619,9 @@ add numerical summaries for centrality
 -->
 
 
-## TODO accennare ai recsys!
+
 <!--
-
-### possibile recsys
-
-```{r}
-## TODO is good idea?
-# Rearrange user_info: rows = users, columns=games
-# consider only play
-
-#  users_info[1:100,] %>%
-#  filter(behavior.name == "play") %>%
-#  distinct(user.id, game.title, value) %>%
-#  spread(game.title, value)
-```
+## TODO accennare ai recsys!
 -->
 
 
