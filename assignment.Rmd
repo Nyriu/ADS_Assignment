@@ -40,6 +40,91 @@ library(formattable)
 ## TODO add pretty images lib
 ```
 
+```{r echo=F, eval=F, include=F}
+maxy = 10
+
+df0 =
+data.frame(
+  id = 22:1,
+  height = c(
+    1.9, 1.8, 1.7,
+    rep(maxy - maxy*84/100, 3),
+    maxy - maxy*87/100,
+    maxy - maxy*90/100,
+    maxy - maxy*95/100,
+    maxy - maxy*98/100,
+    rep(0, 22-10-2),
+    1,2
+  ),
+  wings = c(
+    maxy,
+    maxy - maxy*22/100,
+    maxy - maxy*33/100,
+    rep(0, 22-3)
+  )
+) %>%
+  mutate(frame=0)
+
+framesnum = 20
+calc_offset = function(frame) {
+  offset = (frame %% 2)*maxy*30/100 + rnorm(1, maxy*5/100, 1)
+  return(
+    c(rep(offset, 3),
+      rep(0, 22-3)
+    )
+  )
+}
+
+df = df0
+for (i in 1:framesnum) {
+  df = rbind(
+    df,
+    df0 %>%
+      mutate(frame=i) %>%
+      mutate(wings=wings-calc_offset(i))
+  )
+}
+
+df = df %>%
+  left_join(
+    df %>%
+      filter(id >= 20) %>%
+      #mutate(shadow=height/2),
+      mutate(
+        shadow=wings*0.65 + rnorm(1, maxy*3/100, 1)
+        ),
+    by=c("id", "height", "wings", "frame")
+  ) %>% replace_na(list(shadow=0))
+```
+
+
+```{r echo=F, eval=F, include=F}
+p = df %>%
+  ggplot(aes(x=id, y=height)) +
+  geom_bar(aes(y=wings), stat="identity", fill=alpha("gray50", 0.3)) +
+  geom_bar(stat="identity", fill=alpha("steelblue", 0.5)) +
+  geom_bar(aes(y=shadow), stat="identity", fill=alpha("gray", 0.3)) +
+  ylim(-5,11) +
+  coord_polar(start = 0) +
+  theme_minimal() +
+  transition_states(
+    frame,
+    transition_length = 1,
+    state_length = 0
+  ) +
+  #ggtitle('Now showing {closest_state}',
+  #        subtitle = 'Frame {frame} of {nframes}') +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank()#,
+    #plot.margin = unit(c(-0.5,-3,-3,-2), "cm") # up, right, bottom, left
+  )
+
+animate(p, fps=30)
+```
+!(dragonfly.gif)
+
 ## Introduction
 
 TODO
@@ -669,15 +754,14 @@ ggplotly(p, tooltip = c("text")) #%>%
 ## About the games
 
 Newer games have more playtime than older games?
+The playtime is evenly distributed?
+If not what are the factors that determine the higher playtime?
 
-**TODO** aggiungere domande
-
-Giochi usciti recentemente vengono giocati di più?
-
-* Sia rispetto al valore assoluto (somma totale delle ore)
-* sia tempo medio
-
-Oppure ci sono picchi di giocatori nei tempi sucessivi al rilascio e poi paino piano sfuma? TODO dire che questa è una domanda senza risposta per i dati che abbiamo oppure trovare qualcosa di simile
+<!--
+TODO REMOVE comment?
+Oppure ci sono picchi di giocatori nei tempi sucessivi al rilascio e poi piano piano sfuma?
+Non possibile rispondere a questa domanda con il dataset attuale
+-->
 
 ```{r include=F}
 to_plot =
@@ -718,21 +802,21 @@ p = to_plot %>%
   ylab("Playtime in log(hours)") +
   scale_y_continuous(labels = 
                        c(
-                         "log(~0) = -10",
-                         "log(~0) =  -5",
-                         "log(1) =   0",
-                         "log(150) =   5",
-                         "log(22000) =  10",
-                         "log()  =  15"
+                         "log(~0)   ", #  = -10",
+                         "log(~0)   ", #  =  -5",
+                         "log(1)    ", #  =   0",
+                         "log(150)  ", #  =   5",
+                         "log(22000)", #  =  10",
+                         "log()     "  #  =  15"
                        )
                      
   ) +
   scale_alpha_continuous( labels = c(
-    "log(1)=0",
-    "log(10)=2",
-    "log(50)=4",
-    "log(500)=6",
-    "log(3000)=8"
+    "log(1)   ", #=0",
+    "log(10)  ", #=2",
+    "log(50)  ", #=4",
+    "log(500) ", #=6",
+    "log(3000)"  #=8"
   )) +
   labs( alpha="log(# of Purchases)") +
   geom_label_repel(
@@ -758,10 +842,35 @@ gm = ggMarginal(p, type="histogram", color="white", fill="slateblue")
 gm
 ```
 
+The majority of the games were released between 2013 and 2020 but there's two game far on the left of the plot:
 
-TODO commentare
+* [Dragon's Lair](https://store.steampowered.com/app/227380/Dragons_Lair/), an interactive film video game published in 1983.
+In the game the protagonist Dirk the Daring is a knight attempting to rescue Princess Daphne from the evil dragon Singe who has locked the princess in the foul wizard Mordroc's castle. It featured animation by ex-Disney animator Don Bluth.
 
-Il tempo di gioco rispetto ai generi fa notare qualche cosa? il genere più popolare (persone che gli hanno dato una possibilità/comprato) è anche quello più giocato (comprato ed effettivamente apprezzato molto)?
+* [Space Ace](https://store.steampowered.com/app/240340/Space_Ace/) was unveiled in October 1983, just four months after the Dragon's Lair game, then released in Spring 1984, and like its predecessor featured film-quality animation.
+The gameplay is similar to Dragon's Lair, requiring the player to move the joystick or press the fire button at key moments in the animated sequences to govern the hero's actions.
+
+<!-- There is also the occasional option to either temporarily have the character transform into his adult form or remain as a boy with different styles of challenge. -->
+
+This two are widely considered videogame's history gems.
+
+
+About the playtime we can see that the distribution is almost normal if we do not consider the huge quantity of games played for few minutes.
+It seems that a game is either played for a short period of time and then dislikes, or played for about 100 hours.
+The games with the highest play time are [Team Fortress 2](https://store.steampowered.com/app/440/Team_Fortress_2/) and [Dota 2](https://store.steampowered.com/app/570/Dota_2/), both FreeToPlay Action Multiplayer PvP games.
+The latter, since the 2013 release, hoarded almost 1 million hours of playtime distributed over 5k players.
+Team Fortress 2, released in 2007, accumulated more than 150k hours with less than 2500 users.
+
+```{r include=F}
+to_plot %>% slice_max(purchases, n=2)
+
+```
+
+
+
+Noting that both the top games are FreeToPlay raises a question: what kind of relationship binds the game genre with its popularity?
+Which are the most popular genres, measuring popularity with purchases or playtime?
+
 ```{r include=F}
 # trovo numero min e max di generi associati ad un gioco
 #about_genres_data = 
@@ -780,6 +889,9 @@ games_info %>%
   ggplot(aes(x=genre_num, y=n)) +
   geom_bar(stat = "identity", show.legend = F)
 ```
+
+First of all most games belong to at least two genres, and there are 22 different genres in the dataset.
+
 ```{r echo=F}
 # trovo quanti generi differenti
 to_plot =
@@ -815,6 +927,9 @@ print(
   paste(nrow(to_plot), "generi differenti") # TODO Add as title
 )
 
+to_plot %>%
+  arrange(desc(n))
+
 # TODO capire se si reisce a dinamicizzare con hover decente
 #gp = ggplotly(p, tooltip = c("label")) %>%
 #  config(displayModeBar = FALSE) %>%
@@ -822,7 +937,82 @@ print(
 #         xaxis = list(fixedrange = TRUE))
 #gp
 ```
+In the plot above the area of the circles is proportional to the number of games that belong to the genre.
+The most frequent is Indie with 1223 titles followed by Action (900), Adventure (582) and Strategy (496).
+Note that FreeToPlay occupy the 8-th position.
+This huge difference in the genre presence on the store may be caused by the diffent business strategies.
+The Indie games usually are developed by small groups and sometimes by solo-developers, instead big FreeToPlay need a huge initial investment that's mitigated fidelizing the palyers.
+The income of an indie game comes from the number of units sold, the income of a FreeToPlay comes from in-game purchases of skins, cosmetics and items.
+So a FreeToPlay adopts a strategy that's almost opposite to the one adopted by and inde game.
 
+Also the number of Indie games is extremely increased in the last years because of the accessibility of powerful tools and because of the possibility of reaching a huge audience of customers.
+```{r echo=F}
+genre_pop =
+  games_info %>%
+  filter(!is.na(release_date)) %>%
+  select(game.title, genre, release_date) %>%
+  mutate(
+    genres =
+      lapply( genre,
+              function(x) {
+                data.frame(
+                  genres = unlist(str_split(x, pattern=","))
+                )
+              }
+      )
+  ) %>%
+  unnest(genres) %>%
+  select(release_date, genre=genres) %>%
+  mutate(value=1) %>%
+  
+  arrange(genre, release_date) %>%
+  group_by(genre) %>%
+  mutate(to_date=cumsum(value)) %>%
+  filter(genre != "")
+
+genre_pop_top9 =
+  genre_pop %>%
+  # top 9
+  filter(
+    genre %in%
+      (genre_pop %>%
+         arrange(desc(to_date)) %>%
+         group_by(genre) %>%
+         slice(1) %>%
+         ungroup() %>%
+         arrange(desc(to_date)) %>% pull(genre))[1:9]
+  )
+genre_pop_top9 %>%
+  ggplot(aes(x=release_date, y=to_date, color=genre)) +
+  geom_line(show.legend = F) + 
+  #geom_point() +
+  facet_wrap(~genre) #+ #theme_minimal()
+```
+
+Note the huge difference between the presence of Indie games and FreeToPlay (F2P) over the years.
+Once a F2P game has been released, the developers stick to the game to add new content, sometimes even monthly.
+On the other hand for a small Indie company it's better to release frequently smaller games.
+
+To confirm this different business strategy we should look at the playtime for every genre and note that the Indie genre collected less hours than the F2P genre, the plot below aims at that.
+
+
+```{r echo=F, include=F, eval=F}
+genre_pop_top9 %>%
+#genre_pop[1:2000,] %>%
+  filter(year(release_date) > 2000 ) %>%
+  ggplot(aes(x=genre, y=to_date, fill=genre)) + 
+  geom_bar(stat='identity', show.legend = F) +
+  #theme_bw() +
+  transition_states(
+    year(release_date),
+    transition_length = 2,
+    state_length = 2
+  ) +
+  ease_aes('sine-in-out') +
+  #view_follow() + # TODO does not wokk
+  ggtitle('Now showing {closest_state}',
+          subtitle = 'Frame {frame} of {nframes}')
+```
 
 
 ```{r echo=F, warning=F}
@@ -981,83 +1171,15 @@ d %>%
 
 ```
 
+**TODO**
+The blue columns
 Notare come i Free2Play sono molto presenti e sono anche molto giocati! significa che la gente gioca a quelli un po' a caso tanto per
 
 
 
 
-Come è variata la presenza dei generi negli anni? (bel grafico animato)
-```{r echo=F}
-genre_pop =
-  games_info %>%
-  filter(!is.na(release_date)) %>%
-  select(game.title, genre, release_date) %>%
-  mutate(
-    genres =
-      lapply( genre,
-              function(x) {
-                data.frame(
-                  genres = unlist(str_split(x, pattern=","))
-                )
-              }
-      )
-  ) %>%
-  unnest(genres) %>%
-  select(release_date, genre=genres) %>%
-  mutate(value=1) %>%
-  
-  arrange(genre, release_date) %>%
-  group_by(genre) %>%
-  mutate(to_date=cumsum(value)) %>%
-  filter(genre != "")
-
-genre_pop_top9 =
-  genre_pop %>%
-  # top 9
-  filter(
-    genre %in%
-      (genre_pop %>%
-         arrange(desc(to_date)) %>%
-         group_by(genre) %>%
-         slice(1) %>%
-         ungroup() %>%
-         arrange(desc(to_date)) %>% pull(genre))[1:9]
-  )
-```
-
-
-
-```{r echo=F}
-# wraps of popularity
-# TODO fix labels/title
-genre_pop_top9 %>%
-  ggplot(aes(x=release_date, y=to_date, color=genre)) +
-  geom_line(show.legend = F) + 
-  #geom_point() +
-  facet_wrap(~genre) #+ #theme_minimal()
-```
-
-```{r echo=F, include=F}
-
-genre_pop_top9 %>%
-#genre_pop[1:2000,] %>%
-  filter(year(release_date) > 2000 ) %>%
-  ggplot(aes(x=genre, y=to_date, fill=genre)) + 
-  geom_bar(stat='identity', show.legend = F) +
-  #theme_bw() +
-  transition_states(
-    year(release_date),
-    transition_length = 2,
-    state_length = 2
-  ) +
-  ease_aes('sine-in-out') +
-  #view_follow() + # TODO does not wokk
-  ggtitle('Now showing {closest_state}',
-          subtitle = 'Frame {frame} of {nframes}')
-```
-
-Notare come di F2P negli anni non ne siano usciti moltissimi eppure, assieme agli action, sono quelli giocati di piu'.
 Ora sarebbe da capire quanti dei F2P sono action e quanti degli indie sono action, o comunque che tipo di correlazioni ci sono tra i generi.
+
 
 " questo e' circa text mining sulle stringhe che definiscono i generi"
 **TODO** rimuovere discorso dell'ordine
@@ -1282,7 +1404,7 @@ p = games_bigr_counts %>%
 
 
 
-```{r include=F}
+```{r include=F, eval=F}
 ## TENTATIVO di animazione
 ## Raccolgo i dati dei 3 plot
 
@@ -1321,7 +1443,7 @@ g3 = d3 %>% as_tbl_graph()
 ```
 
 
-```{r include=F}
+```{r include=F, eval=F}
 p1 = g1 %>%
   ggraph(layout = "fr") +
   geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
@@ -1340,7 +1462,7 @@ p3 = g3 %>%
 ```
 
 
-```{r include=F}
+```{r include=F, eval=F}
 #graph123 %>%
 g123 %>%
   ggraph(layout = "fr") +
@@ -1426,7 +1548,7 @@ g =
 ```
 
 
-```{r echo=F, include=F}
+```{r echo=F, include=F, eval=F}
 g %>%
   ggraph(layout = "fr") +
   #ggraph(layout = "linear", circular=T) +
