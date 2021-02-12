@@ -195,10 +195,12 @@ formattable(head(raw_data_2 %>% select(name, release_date, genre, developer)))
 
 ### Analyzed
 
-TODO dire meglio
 Because I was interested in following the connections between gamers and type of games played I've created two sub datasets:
-<!-- TODO add link to github? -->
-*users_info.csv* is a subset of the first one, while *games_info.csv* is a subset of the second.
+[users_info.csv](https://github.com/Nyriu/ADS_Assignment/blob/main/users_info.csv)
+is a subset of the first one, while
+[games_info.csv](https://github.com/Nyriu/ADS_Assignment/blob/main/games_info.csv)
+is a subset of the second.
+
 They were created joining the initial datasets in a way that, for now on, only games with players will be considered and only player that play games for which we actually have details.
 Summing up we consider 2k games and 10k users, with over 90k user-game interactions (either "purchase" or "play").
 Every users plays at least one of the 2k games and every game has a description and at least one player.
@@ -450,8 +452,6 @@ to_plot %>%
   #labs( alpha="Money Spent")
 ```
 ```{r include=F}
-## TODO REMOVE
-
 mean  (to_plot %>% pull(titles))
 median(to_plot %>% pull(titles))
 
@@ -500,11 +500,6 @@ to_plot %>%
                     state_length = 2) +
   ease_aes('cubic-in-out') +
   view_follow() +
-  # TODO REMOVE
-  #ggtitle("Now showing {closest_state}",
-  #        subtitle = "Frame {frame} of {nframes}") +
-  #xlab("Number of Games") +
-  #ylab("Number of Hours Played") +
   xlab(funx("{closest_state}")) +
   ylab(funy("{closest_state}")) +
   
@@ -719,7 +714,6 @@ Note that very few games can be completed in such a few hours.
 Follows an interactive plot to better explore the users' preferences.
 
 ```{r echo=F}
-# TODO title and labels
 p = pie_data %>%
   select(user.id, game.title, price, hours) %>%
   ggplot(aes(x=price, y=hours, text=game.title)) +
@@ -730,17 +724,9 @@ p = pie_data %>%
   xlab("Price") +
   ylab("Hours")
 
-ggplotly(p, tooltip = c("text")) #%>%
-  #config(displayModeBar = FALSE) %>%
-  #layout(yaxis = list(fixedrange = TRUE),
-  #       xaxis = list(fixedrange = TRUE))
+ggplotly(p, tooltip = c("text"))
 
 ```
-
-
-<!-- ### TODO other on players? -->
-<!-- **TODO**? -->
-
 
 
 
@@ -751,7 +737,6 @@ The playtime is evenly distributed?
 If not what are the factors that determine the higher playtime?
 
 <!--
-TODO REMOVE comment?
 Oppure ci sono picchi di giocatori nei tempi sucessivi al rilascio e poi piano piano sfuma?
 Non possibile rispondere a questa domanda con il dataset attuale
 -->
@@ -990,7 +975,7 @@ genre_pop_top9 %>%
     state_length = 2
   ) +
   ease_aes('sine-in-out') +
-  #view_follow() + # TODO does not wokk
+  #view_follow() + # does NOT work
   ggtitle('Now showing {closest_state}',
           subtitle = 'Frame {frame} of {nframes}')
 ```
@@ -1051,7 +1036,7 @@ genres_playtime = genres_playtime %>%
 genres_playtime %>%
   ggplot(aes(x=reorder(genre, playtime_abs), y=playtime_abs)) +
   geom_bar(stat="identity", fill=alpha("steelblue", 0.5)) +
-  #geom_bar(aes(y=-playtime_rel*50), stat="identity", fill=alpha("red", 0.5)) + # TODO transition
+  #geom_bar(aes(y=-playtime_rel*50), stat="identity", fill=alpha("red", 0.5)) +
   ylim(-1050000,2000000) +
   theme_minimal() +
   theme(
@@ -1060,17 +1045,13 @@ genres_playtime %>%
     panel.grid = element_blank(),
     plot.margin = unit(c(-0.5,-3,-3,-2), "cm") # up, right, bottom, left
   ) +
-  coord_polar(start = 0) #+
-  #geom_text( # TODO transition
-  #  aes(y=playtime_abs + 100000, label=genre, hjust=hjust),
-  #  color="black", fontface="bold",alpha=0.6, size=2.5, angle= genres_playtime$angle#, inherit.aes = FALSE
-  #  ) 
+  coord_polar(start = 0) 
 
 genres_playtime %>%
   ggplot(aes(x=reorder(genre, playtime_abs), y=playtime_abs)) +
   geom_bar(stat="identity", fill=alpha("steelblue", 0.5)) +
-  #geom_bar(aes(y=-(playtime_rel*playtime_rel)/log(playtime_rel)), stat="identity", fill=alpha("red", 0.5)) + # TODO transition
-  geom_bar(aes(y=-playtime_rel*50), stat="identity", fill=alpha("red", 0.5)) + # TODO transition
+  #geom_bar(aes(y=-(playtime_rel*playtime_rel)/log(playtime_rel)), stat="identity", fill=alpha("red", 0.5)) +
+  geom_bar(aes(y=-playtime_rel*50), stat="identity", fill=alpha("red", 0.5)) +
   ylim(-1050000,2000000) +
   theme_minimal() +
   theme(
@@ -1080,15 +1061,10 @@ genres_playtime %>%
     plot.margin = unit(c(-0.5,-3,-3,-2), "cm") # up, right, bottom, left
   ) +
   coord_polar(start = 0) +
-  geom_text( # TODO transition
+  geom_text(
     aes(y=playtime_abs + 100000, label=genre, hjust=hjust),
     color="black", fontface="bold",alpha=0.6, size=2.5, angle= genres_playtime$angle#, inherit.aes = FALSE
     ) 
-
-# TODO add transition adding labels then redbars
-# with smooth transition
-
-# TODO add title/legend?
 
 ```
 
@@ -1128,7 +1104,7 @@ d %>%
     #plot.margin = unit(c(-0.5,-3,-3,-2), "cm") # up, right, bottom, left
   ) +
   coord_polar(start = 0) +
-  geom_text( # TODO transition
+  geom_text(
     aes(y=labely, label=label, hjust=hjust),
     color="black", fontface="bold",alpha=0.6, size=2.5, angle= d$angle #, inherit.aes = FALSE
     ) +
@@ -1144,11 +1120,6 @@ d %>%
   #ease_aes('quadratic-in') #+
   #ggtitle('Now showing {closest_state}',
   #        subtitle = 'Frame {frame} of {nframes}')
-
-# TODO add transition adding labels then redbars
-# with smooth transition
-
-# TODO add title/legend?
 
 ```
 
@@ -1193,11 +1164,7 @@ ggraph(bigram_graph, layout = "fr") +
   geom_edge_arc2(aes(edge_alpha=n), color="steelblue", show.legend = F, arrow = a, end_cap=circle(0.06, "inches")) +
   geom_node_point(color="steelblue") +
   geom_node_text(aes(label = name), vjust=1, hjust=1) +
-  theme_void() #+
-  #ggtitle(paste0('Layout: ', l)) +  
-  #theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
-## TODO add title/labels?
-## TODO generate until really beautiful
+  theme_void()
 
 ```
 
@@ -1285,23 +1252,12 @@ games_bigr_counts =
 ```{r echo=F, include=F}
 games_bigr_counts %>%
   filter(word1 > word2) %>%
-  #filter(ndivfreq > 1) %>%
   as_tbl_graph() %>%
   ggraph(layout = "fr") +
-  #ggraph(layout = "star") +
-  #ggraph(layout = "kk") +
-  #ggraph(layout = "circle") +
-  
-  #geom_edge_arc(aes(edge_alpha=n), color="steelblue", show.legend = F) +
   geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
   
   geom_node_text(aes(label = name)) +
-  theme_void() #+
-
-  #ggtitle(paste0('Layout: ', l)) +  
-  #theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
-## TODO add title/labels?
-## TODO generate until really beautiful
+  theme_void()
 ```
 
 <center>
@@ -1326,31 +1282,19 @@ interesting_genres = c(
 )
 
 
-#for (lvl in c(0,3,5,7,10,12)) {
-  
 lvl=5
-p = games_bigr_counts %>%
+games_bigr_counts %>%
   filter(
     word1 %in% interesting_genres |
       word2 %in% interesting_genres
-    ) %>%
+  ) %>%
   filter(word1 > word2) %>%
   filter(ndivfreq > lvl) %>%
   as_tbl_graph() %>%
   ggraph(layout = "fr") +
-  
-  #geom_edge_arc(aes(edge_alpha=n), color="steelblue", show.legend = F) +
   geom_edge_arc(aes(edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
-  
   geom_node_text(aes(label = name)) +
-  theme_void() #+
-
-  #ggtitle(paste0('Layout: ', l)) +  
-  #theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
-## TODO add title/labels?
-## TODO generate until really beautiful
-  plot(p)
-#}
+  theme_void()
 ```
 
 <center>
@@ -1364,10 +1308,10 @@ Note also that Indie is loosely connected with F2P and almost not connected at a
 
 
 ```{r echo=F, include=F}
-p = games_bigr_counts %>%
+games_bigr_counts %>%
   filter(
     word1 == "indie" | word2 == "indie"
-    ) %>%
+  ) %>%
   filter(word1 > word2) %>%
   as_tbl_graph() %>%
   ggraph(layout = "star") +
@@ -1375,15 +1319,9 @@ p = games_bigr_counts %>%
     edge_alpha=ndivfreq), color="steelblue", show.legend = F) +
   
   geom_node_text(aes(label = name)) +
-  #geom_node_label(aes(label = name)) +
-  theme_void() #+
+  theme_void()
 
-  #ggtitle(paste0('Layout: ', l)) +  
-  #theme(legend.position = 'none')#,  #plot.title = element_text(colour = alpha('black', title_alpha)))
-## TODO add title/labels?
-## TODO generate until really beautiful
-  plot(p)
-#}
+plot(p)
 ```
 <!--
 <center>
@@ -1479,22 +1417,6 @@ g123 %>%
 
 
 
-
-
-
-
-
-
-
-
-
-<!--
-TODO
-## text "mining" per capire quando e' porbabile che un gioco indie sia action/f2p
-
-
-### text mining su descrizioni per capire se c'e' combo "vincente"
--->
 
 ## About user-games interactions
 Looking at games and users as nodes of a bipartite graph connected by the hours of play, I was able to produce the graph below.
@@ -1596,17 +1518,14 @@ plot(p)
 p +
   geom_node_text(aes(label=name, filter = (centrality > 0.30),
                      vjust=1, hjust=1))
-## TODO end label stuff
-  #geom_label_repel(
-  #  aes(x=x, y=y, label=name),
-  #  box.padding   = 0.35, 
-  #  point.padding = 0.35,
-  #  segment.color = 'grey50'
-  #  ) #+
-  #geom_text(aes(x = x, y=y, label=name), nudge_x = 0.3, nudge_y = 0.3)
 ```
 
-**TODO** add comment
+
+The red dots represent games, the blue dots users.
+The bigger the dot the higher the centrality of the node.
+As expected the nodes with the highest centrality are Dota 2 and Team Fortress 2.
+This result confirms that the games have spreaded effectively and can be considered good connection points between people.
+
 <!--
 add numerical summaries for centrality
 
@@ -1615,63 +1534,12 @@ add numerical summaries for centrality
 ### rete in cui grossezza link e' ore giocate
 ### analisi dei giochi "centrali"
 
+
 ### poi collego anche i tag analisi dei tag "centrali"
 -->
 
 
 
 <!--
-## TODO accennare ai recsys!
+## accennare ai recsys?
 -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
